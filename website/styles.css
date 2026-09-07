@@ -528,18 +528,8 @@ h2 {
   font-size:14px;
   line-height:1.8
 }
-.release-status {
-  display:inline-flex;
-  align-items:center;
-  margin-top:13px;
-  background:#fff;
-  padding:13px 22px;
-  border:1px solid #d9dee7;
-  border-radius:8px;
-  font-size:13px
-}
-.release-status .status-dot {
-  background:#798ba7
+.release-link {
+  margin-top:13px
 }
 .download .release-detail {
   font-size:11px!important;

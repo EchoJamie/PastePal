@@ -1,6 +1,6 @@
 # 官网维护
 
-PastePal 的静态介绍页，无第三方运行依赖或后端，由轻量脚本生成发布目录，与应用共用 Git 仓库。应用尚无公开下载，页面保留未发布状态。
+PastePal 的静态介绍页，无第三方运行依赖或后端，由轻量脚本生成发布目录，与应用共用 Git 仓库。导航、首屏和底部下载入口统一指向 [GitHub Releases](https://github.com/EchoJamie/PastePal/releases)，安装包以该页面实际发布的内容为准。
 
 ## 预览与发布
 
