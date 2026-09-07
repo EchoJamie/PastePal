@@ -33,3 +33,5 @@ python3 -m http.server 4173 --bind 127.0.0.1 --directory website
 连接后，推送或合并到 `main` 自动更新生产站点，其他分支及 PR 生成预览部署；无需在 GitHub 保存 Vercel Token。`.github/workflows/website.yml` 负责站点语法和构建检查，实际部署由 Vercel Git 集成完成。首次接入需要在 Vercel 授权访问目标仓库，配置自定义域名后沿用同一生产部署。
 
 具体平台行为见 [Vercel GitHub 集成说明](https://vercel.com/docs/git/vercel-for-github)。本地可执行 `node website/build.mjs` 检查发布目录。连接项目之前，仓库中的配置不会自行创建 Vercel 项目或上线站点。
+
+下载链接在构建时使用 `VERCEL_GIT_REPO_OWNER` 和 `VERCEL_GIT_REPO_SLUG` 生成，三个下载入口统一指向对应仓库的 Releases 页面；本地没有这些变量时使用 `EchoJamie/PastePal`。Vercel 项目需启用自动暴露系统环境变量，无需手动填写仓库地址或 Token，变量变更后需重新部署。参见 [Vercel 系统环境变量](https://vercel.com/docs/environment-variables/system-environment-variables)。
