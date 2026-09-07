@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f6f2">
+  <meta name="description" content="贴伴 PastePal，一款原生 macOS 剪贴板工具。把复制过的文字、图片和文件引用留在本机，随时搜索、分组、再次使用。">
+  <title>贴伴 PastePal · 复制过的，随手找回</title>
+  <link rel="icon" type="image/png" href="assets/pastepal-logo.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <header class="site-header wrap">
+    <a class="brand" href="#" aria-label="贴伴 PastePal 首页"><img src="assets/pastepal-logo.png" alt="" width="44" height="44"><span>贴伴 <span class="brand-en">PastePal</span></span></a>
+    <nav aria-label="主要导航"><a href="#features">功能</a><a href="#shortcuts">快捷键</a><a class="nav-download" href="#download">获取贴伴 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="eyebrow"><span class="status-dot"></span> 为你的 Mac 做的剪贴板小工具</div>
+      <h1 id="hero-title">复制过的，<br><span>随手找回。</span></h1>
+      <p class="hero-copy">一句话、一张图、一个刚刚用过的文件。<br>贴伴帮你留住复制记录，让下一次使用少一点翻找。</p>
+      <div class="hero-actions"><a class="button primary" href="#download">获取贴伴 <span aria-hidden="true">↓</span></a><a class="text-link" href="#preview">看看它的样子 <span aria-hidden="true">↘</span></a></div>
+      <p class="platform-note">原生 macOS · 本地历史 · 无需账号</p>
+      <div class="hero-icon" aria-hidden="true"><img src="assets/pastepal-logo.png" alt="" width="240" height="240"><span class="floating-key"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>V</kbd></span><span class="icon-caption">你的下一次粘贴，有伴了。</span></div>
+    </section>
+    <section id="preview" class="preview-section wrap" aria-label="应用界面预览">
+      <div class="preview-top"><span><span class="tiny-dot"></span> 熟悉的 Mac，顺手的小面板</span><div class="appearance" role="group" aria-label="切换界面预览"><button type="button" data-theme="light" aria-pressed="true">浅色</button><button type="button" data-theme="dark" aria-pressed="false">深色</button></div></div>
+      <figure><div class="desktop-scene"><div class="scene-caption"><span>想用的时候，呼出来。</span><span class="scene-keys"><kbd>⌘</kbd> + <kbd>⇧</kbd> + <kbd>V</kbd></span></div><div class="panel-scroll" tabindex="0" aria-label="应用面板截图，窄屏可横向滚动"><img id="panel-image" src="assets/panel-light.png" width="2880" height="712" alt="贴伴浅色面板：周末计划、图片、链接、颜色和文件卡片，顶部为日常、灵感收藏和工作资料分组。"></div></div><figcaption>原生界面 · 示例内容 · 窄屏可横向查看</figcaption></figure>
+    </section>
+    <section id="features" class="features wrap" aria-labelledby="features-title">
+      <div class="section-intro"><p class="eyebrow">从复制，到再一次使用</p><h2 id="features-title">少一点来回，<br>多一点顺手。</h2><p>留在菜单栏里，需要时再出现。<br>把注意力留给正在做的事。</p></div>
+      <div class="feature-grid">
+        <article class="feature"><span class="feature-number">01 / 留住</span><div class="content-types" aria-hidden="true"><span>Aa</span><span>▧</span><span>#</span></div><h3>不止是文字</h3><p>文字、链接、富文本、图片、颜色代码，还有 Finder 文件引用。熟悉的内容，放进同一排卡片。</p><p class="small-note">文件保留原位置的引用，不备份文件内容。</p></article>
+        <article class="feature"><span class="feature-number">02 / 找回</span><div class="search-demo" aria-hidden="true"><span>⌕</span> 上次的灵感<span class="caret"></span></div><h3>想到什么，就搜什么</h3><p>输入关键词，按文字、文件名、链接标题或已记录的来源应用查找。常用内容放进自定义分组，下次更好找。</p><p class="small-note">图片可按来源查找，暂不支持文字识别。</p></article>
+        <article class="feature"><span class="feature-number">03 / 再用</span><div class="key-demo" aria-hidden="true"><kbd>←</kbd><kbd>→</kbd><kbd>↩</kbd></div><h3>手不离键盘</h3><p>方向键选择，回车确认，空格放大预览。也可以用 ⌘1–9，快速使用眼前的对应记录。</p><p class="small-note">正常使用需辅助功能授权；回车默认直接粘贴。</p></article>
+      </div>
+    </section>
+    <section class="local-section wrap" aria-labelledby="local-title"><div class="local-symbol" aria-hidden="true">⌂</div><div><p class="eyebrow">小工具，本地用</p><h2 id="local-title">你的历史，留在你的 Mac。</h2><p>不需要登录，没有订阅，也没有应用内同步服务。<br>记录、搜索和再次使用，离线也能完成。</p><p class="local-detail">独立网页链接会联网获取标题与预览图；历史不会作为同步数据上传。你可以暂停记录、排除应用，并管理历史保留条数。</p></div></section>
+    <section id="shortcuts" class="shortcuts wrap" aria-labelledby="shortcuts-title"><div><p class="eyebrow">几下按键，就到手边</p><h2 id="shortcuts-title">越用，越顺手。</h2><p>从一个呼出快捷键开始，<br>慢慢找到自己的节奏。</p><span class="shortcut-badge">默认呼出键可在设置中更改</span></div><dl class="shortcut-list"><div><dt>呼出历史面板</dt><dd><kbd>⌘</kbd><kbd>⇧</kbd><kbd>V</kbd></dd></div><div><dt>选择记录</dt><dd><kbd>←</kbd><kbd>→</kbd></dd></div><div><dt>确认使用</dt><dd><kbd>↩</kbd></dd></div><div><dt>纯文本使用</dt><dd><span><kbd>⌥</kbd><kbd>↩</kbd></span></dd></div><div><dt>放大预览</dt><dd><kbd class="wide-key">空格</kbd></dd></div><div><dt>搜索 / 加入分组</dt><dd><span><kbd>⌘</kbd><kbd>F</kbd></span><span class="key-or">/</span><span><kbd>⌘</kbd><kbd>G</kbd></span></dd></div></dl><p class="shortcut-footnote">搜索时，第一次回车完成搜索并回到卡片，第二次回车才使用记录。正常使用需先授予辅助功能权限；确认使用默认直接粘贴，无法恢复目标位置时会提示手动粘贴。</p></section>
+    <section id="download" class="download wrap" aria-labelledby="download-title"><img src="assets/pastepal-logo.png" alt="贴伴应用图标" width="96" height="96"><p class="eyebrow">贴伴 PASTEPAL</p><h2 id="download-title">给下一次复制，<br>留个位置。</h2><p>首版正在打磨，期待成为你顺手的日常工具。</p><span class="release-status"><span class="status-dot"></span> v0.1.0 · 尚未公开发布</span><p class="release-detail">macOS 15 及以上 · 当前可从源码本地构建<br>已采用 Apple Development 开发证书签名，尚未公证或提供公开下载包。下载入口将在正式发布后开放。</p></section>
+  </main>
+  <footer class="wrap"><a class="brand" href="#"><img src="assets/pastepal-logo.png" alt="" width="32" height="32"><span>贴伴 <span class="brand-en">PastePal</span></span></a><span>复制的片刻，也值得留住。</span><a href="#main">回到顶部 ↑</a></footer>
+</body>
+</html>

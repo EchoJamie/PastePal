@@ -1,0 +1,32 @@
+name: 官网检查
+
+on:
+  push:
+    branches: [main]
+    paths: ['website/**', '.github/workflows/website.yml']
+  pull_request:
+    paths: ['website/**', '.github/workflows/website.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 检查并构建静态站点
+        run: |
+          node --check website/script.js
+          node --check website/build.mjs
+          node website/build.mjs
+          test -s website/dist/index.html
+          test ! -e website/dist/README.md
+          test ! -e website/dist/vercel.json

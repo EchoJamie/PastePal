@@ -1,0 +1,21 @@
+{
+  "applicationIcon": {
+    "stage": "user-selected-generated",
+    "source": "PastePal-selected-logo.png",
+    "sourceSHA256": "61d44008ce0194fa95caec72438879fd7af2d229738ff460d7f1811ed0fca4a6",
+    "exportScript": "../../scripts/build-icon-assets.sh",
+    "outputs": [
+      "../AppIcon.png",
+      "../AppIcon.icns"
+    ],
+    "appIconPNG_SHA256": "525662b8aa5f569622f86915c955a58ddd93b526893047aecf7f4cdaa4c0bee3",
+    "appIconICNS_SHA256": "7462d3704975980b92a836b197aa8604242afc830f9edefe6262c95761716d71"
+  },
+  "statusIcon": {
+    "stage": "selected-logo-companion",
+    "source": "../../Sources/PastePal/Resources/StatusPastePalTemplate.svg",
+    "sourceSHA256": "944e12b834d1c286019345c2b0decefb03abaceaba74c3c8ffcb66fcf50303e8",
+    "logicalSizePoints": 18,
+    "template": true
+  }
+}

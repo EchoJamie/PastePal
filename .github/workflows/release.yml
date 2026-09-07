@@ -1,0 +1,146 @@
+name: 发布 PastePal
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '已存在的版本标签，例如 v0.1.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      PASTEPAL_CODESIGN_IDENTITY: ${{ vars.PASTEPAL_CODESIGN_IDENTITY || 'EDAF5540E35BBA649726925FC5E5B0176BB07AEB' }}
+    steps:
+      - name: 校验标签格式
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo '标签必须为 vX.Y.Z'; exit 1; }
+          [[ "$(uname -m)" == arm64 ]] || { echo '需要 Apple Silicon runner'; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+          persist-credentials: false
+      - name: 核对版本与文档
+        run: |
+          version="$(plutil -extract CFBundleShortVersionString raw resources/Info.plist)"
+          [[ "$RELEASE_TAG" == "v$version" ]] || { echo '标签与 Info.plist 版本不一致'; exit 1; }
+          python3 scripts/verify-docs.py
+      - name: 检查签名配置
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          : "${CERTIFICATE_BASE64:?缺少 MACOS_CERTIFICATE_P12_BASE64}"
+          : "${CERTIFICATE_PASSWORD:?缺少 MACOS_CERTIFICATE_PASSWORD}"
+      - name: Release 测试
+        run: ./scripts/swift-env.sh test -c release
+      - name: 导入临时签名证书
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          : "${CERTIFICATE_BASE64:?缺少 MACOS_CERTIFICATE_P12_BASE64}"
+          : "${CERTIFICATE_PASSWORD:?缺少 MACOS_CERTIFICATE_PASSWORD}"
+          umask 077
+          certificate="$RUNNER_TEMP/pastepal-signing.p12"
+          keychain="$RUNNER_TEMP/pastepal-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 32)"
+          echo "::add-mask::$keychain_password"
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          path = Path(os.environ['RUNNER_TEMP']) / 'pastepal-signing.p12'
+          path.write_bytes(base64.b64decode(os.environ['CERTIFICATE_BASE64'], validate=True))
+          path.chmod(0o600)
+          PY
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$certificate" -P "$CERTIFICATE_PASSWORD" -k "$keychain" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain"
+          rm -f "$certificate"
+          security find-identity -v -p codesigning "$keychain" | grep -Fq "$PASTEPAL_CODESIGN_IDENTITY"
+      - name: 构建正式应用与 DMG
+        run: |
+          ./scripts/build-app.sh release
+          ./scripts/package-dmg.sh
+          git diff --exit-code
+          cd build
+          shasum -a 256 "PastePal-${RELEASE_TAG#v}-arm64.dmg" > SHA256SUMS.txt
+          python3 - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          Path('release-manifest.json').write_text(json.dumps({
+              'tag': os.environ['RELEASE_TAG'],
+              'commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'architecture': 'arm64',
+              'signing_identity': os.environ['PASTEPAL_CODESIGN_IDENTITY'],
+              'notarized': False,
+          }, indent=2) + '\n')
+          PY
+      - name: 清理签名材料
+        if: always()
+        run: |
+          keychain="$RUNNER_TEMP/pastepal-signing.keychain-db"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          (Path(os.environ['RUNNER_TEMP']) / 'pastepal-signing.p12').unlink(missing_ok=True)
+          PY
+          if [[ -f "$keychain" ]]; then security delete-keychain "$keychain"; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: |
+            build/PastePal-*-arm64.dmg
+            build/SHA256SUMS.txt
+            build/release-manifest.json
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets
+      - name: 创建并发布 Release
+        run: |
+          cd release-assets
+          sha256sum --check SHA256SUMS.txt
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            draft="$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)"
+            [[ "$draft" == true ]] || { echo 'Release 已发布，拒绝覆盖已有资产'; exit 1; }
+          else
+            cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          Apple Silicon 版本，要求 macOS 15 或更高版本。
+          下载 DMG，将 PastePal.app 拖入 Applications。应用使用开发证书签名，尚未公证。
+          SHA256SUMS.txt 可用于校验下载完整性；release-manifest.json 记录源码提交和构建身份。
+          NOTES
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "PastePal $RELEASE_TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi
+          gh release upload "$RELEASE_TAG" ./*.dmg SHA256SUMS.txt release-manifest.json --clobber
+          gh release edit "$RELEASE_TAG" --draft=false
