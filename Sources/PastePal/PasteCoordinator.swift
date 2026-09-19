@@ -51,14 +51,19 @@ final class PasteCoordinator {
             guard front == saved.app.processIdentifier || front == ownPID else {
                 completion(L("已复制。工作应用已切换，请手动按 ⌘V。")) ; return
             }
-            if front == ownPID, retries > 0 {
-                self.checkAndPaste(saved, expectedChangeCount: expectedChangeCount, retries: retries - 1, completion: completion); return
-            }
             let axApp = AXUIElementCreateApplication(saved.app.processIdentifier)
             guard front == saved.app.processIdentifier,
                   let window = self.attribute(axApp, kAXFocusedWindowAttribute), CFEqual(window, saved.window),
-                  let element = self.attribute(axApp, kAXFocusedUIElementAttribute), CFEqual(element, saved.element),
-                  let source = CGEventSource(stateID: .combinedSessionState),
+                  let element = self.attribute(axApp, kAXFocusedUIElementAttribute), CFEqual(element, saved.element) else {
+                // 应用回到前台时，窗口和输入元素仍可能尚未恢复；共用同一重试预算。
+                if retries > 0 {
+                    self.checkAndPaste(saved, expectedChangeCount: expectedChangeCount, retries: retries - 1, completion: completion)
+                } else {
+                    completion(L("已复制。输入位置无法可靠恢复，请手动按 ⌘V。"))
+                }
+                return
+            }
+            guard let source = CGEventSource(stateID: .combinedSessionState),
                   let down = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
                   let up = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) else {
                 completion(L("已复制。输入位置无法可靠恢复，请手动按 ⌘V。")) ; return

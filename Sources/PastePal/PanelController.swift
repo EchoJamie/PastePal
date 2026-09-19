@@ -415,7 +415,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
 
     init(model: AppModel) {
         self.model = model
-        let panel = HistoryPanel(contentRect: NSRect(x: 0, y: 0, width: 1100, height: PanelLayout.height), styleMask: [.borderless], backing: .buffered, defer: false)
+        let panel = HistoryPanel(contentRect: NSRect(x: 0, y: 0, width: 1100, height: PanelLayout.height), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.level = .floating; panel.isFloatingPanel = true; panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = true
@@ -452,7 +452,6 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     func show() {
         guard allowPresentation() else { return }
         guard !isVisible else {
-            NSApp.activate(ignoringOtherApps: true)
             window?.makeKeyAndOrderFront(nil)
             focusForCurrentMode()
             return
@@ -463,7 +462,6 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         prepareForDisplay()
         position()
         prepareEntranceAnimation()
-        NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
         focusCards()
         installOutsideMonitor()
@@ -932,7 +930,6 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     func statusMenuDidClose() {
         statusMenuOpen = false
         guard restoreFocusAfterStatusMenu, isVisible else { return }
-        NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
         focusForCurrentMode()
     }
@@ -1539,7 +1536,6 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
 
     private func restorePanelFocus() {
         guard !closing, isVisible else { return }
-        NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
         focusForCurrentMode()
     }
