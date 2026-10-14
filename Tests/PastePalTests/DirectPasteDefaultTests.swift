@@ -5,6 +5,16 @@ import ClipboardCore
 @testable import PastePal
 
 final class DirectPasteDefaultTests: AppTestSupport {
+    @MainActor func testInvalidatedTargetIsRejectedBeforeActivation() {
+        let paste = PasteCoordinator(permission: { true })
+        let saved = PasteCoordinator.Target(generation: 0, app: .current)
+        paste.invalidate()
+        var feedback: String?
+        paste.paste(to: saved, expectedChangeCount: 0) { feedback = $0 }
+        XCTAssertEqual(feedback, L("已复制。无法确认原来的输入窗口，请手动按 ⌘V。"))
+        XCTAssertNil(paste.target)
+    }
+
     @MainActor func testMissingAccessibilityBlocksClipboardWriteAndRequestsGuidance() async throws {
         let model = try AppModel(directory: directory, settings: SettingsStore(defaults: defaults), pasteboard: board, paste: PasteCoordinator(permission: { false }))
         let entry = try model.store.record(ContentCodec.decode(values("不得复制")), limit: 10)
