@@ -19,18 +19,18 @@ final class GroupSpaceContextTests: AppTestSupport {
         window.sendEvent(try keyEvent(49, " "))
         try await waitUntil { model.entryIDs(in: group.id).contains(entryID) }
         XCTAssertFalse(panel.isGroupInteractionVisible)
-        XCTAssertFalse(panel.hasPreviewController)
+        XCTAssertFalse(panel.isPreviewVisible)
         XCTAssertNil(board.string(forType: .string))
         window.sendEvent(try keyEvent(49, " "))
-        try await waitUntil { panel.hasPreviewController }
+        try await waitUntil { panel.isPreviewVisible }
         XCTAssertTrue(panel.isVisible)
         XCTAssertNil(board.string(forType: .string))
-        panel.previewWindow?.close()
-        try await waitUntil { !panel.hasPreviewController }
+        panel.closePreview()
+        try await waitUntil { !panel.isPreviewVisible }
         panel.selectGroup(empty.id)
         XCTAssertTrue(panel.visibleEntryIDs.isEmpty)
         window.sendEvent(try keyEvent(49, " "))
-        XCTAssertFalse(panel.hasPreviewController)
+        XCTAssertFalse(panel.isPreviewVisible)
         XCTAssertFalse(panel.isGroupInteractionVisible)
         XCTAssertTrue(panel.isVisible)
         XCTAssertEqual(panel.selectedGroupID, empty.id)
@@ -81,7 +81,7 @@ final class GroupSpaceContextTests: AppTestSupport {
             editor.setMarkedText("候选", selectedRange: NSRange(location: 2, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
             window.sendEvent(try keyEvent(49, " "))
             XCTAssertEqual(model.groups.map(\.name), ["原名"])
-            XCTAssertFalse(panel.hasPreviewController)
+            XCTAssertFalse(panel.isPreviewVisible)
             XCTAssertNil(board.string(forType: .string))
             editor.unmarkText()
             if context == 0 { panel.cancelSearch() } else { panel.closeGroupInteraction() }

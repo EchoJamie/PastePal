@@ -201,6 +201,7 @@
   "搜索（{0}）": "Search ({0})",
   "撤销": "Undo",
   "撤销标注": "Undo Annotation",
+  "收起预览（Esc）": "Collapse Preview (Esc)",
   "数据目录": "Data Folder",
   "数据迁移：{0}；设置迁移：{1}": "Data migration: {0}; settings migration: {1}",
   "文件": "File",

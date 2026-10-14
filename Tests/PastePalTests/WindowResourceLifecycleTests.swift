@@ -26,9 +26,9 @@ final class WindowResourceLifecycleTests: AppTestSupport {
         let panel = PanelController(model: model)
         panel.show()
         panel.historyView.keyDown(with: try keyEvent(49, " "))
-        try await waitUntil { panel.hasPreviewController }
-        panel.previewWindow?.close()
-        try await waitUntil { !panel.hasPreviewController }
+        try await waitUntil { panel.isPreviewVisible }
+        panel.closePreview()
+        try await waitUntil { !panel.isPreviewVisible }
         panel.dismiss()
         XCTAssertTrue(panel.visibleEntryIDs.isEmpty)
     }

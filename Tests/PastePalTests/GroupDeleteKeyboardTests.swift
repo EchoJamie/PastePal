@@ -28,7 +28,7 @@ final class GroupDeleteKeyboardTests: AppTestSupport {
         window.sendEvent(try keyEvent(49, " "))
         XCTAssertFalse(panel.isGroupInteractionVisible)
         XCTAssertTrue(panel.isCollectionFocused)
-        XCTAssertFalse(panel.hasPreviewController)
+        XCTAssertFalse(panel.isPreviewVisible)
         XCTAssertEqual(model.groups.count, 2)
 
         panel.requestSelectedGroupDeletion()

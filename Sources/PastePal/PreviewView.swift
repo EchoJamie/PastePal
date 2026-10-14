@@ -16,7 +16,7 @@ final class PreviewColorView: NSView {
     required init?(coder: NSCoder) { fatalError() }
     override func draw(_ dirtyRect: NSRect) {
         NSColor.windowBackgroundColor.setFill(); bounds.fill()
-        let side = min(bounds.width - 80, bounds.height - 120)
+        let side = max(0, min(bounds.width - 80, bounds.height - 120))
         let swatch = NSRect(x: bounds.midX - side / 2, y: bounds.midY - side / 2 - 18, width: side, height: side)
         drawCheckerboard(in: swatch)
         NSColor(srgbRed: CGFloat(color.red) / 255, green: CGFloat(color.green) / 255, blue: CGFloat(color.blue) / 255, alpha: CGFloat(color.alpha) / 255).setFill()
@@ -26,47 +26,71 @@ final class PreviewColorView: NSView {
         (label as NSString).draw(in: NSRect(x: 30, y: swatch.maxY + 22, width: bounds.width - 60, height: 28), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 18, weight: .semibold), .foregroundColor: NSColor.labelColor, .paragraphStyle: paragraph])
     }
 }
-final class PreviewWindow: NSWindow {
-    override func cancelOperation(_ sender: Any?) { close() }
-}
-final class PreviewController: NSWindowController, NSWindowDelegate {
+final class PreviewView: NSView {
     var onClose: (() -> Void)?
+    private let contentView: NSView
+    var textView: NSTextView? { (contentView as? NSScrollView)?.documentView as? NSTextView }
+
     init(content: ClipboardContent) {
-        let window = PreviewWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 540), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        let title: String
         switch content.kind {
-        case .image: window.title = L("图片预览 · \(content.width ?? 0) × \(content.height ?? 0)")
-        case .file: window.title = L("文件预览 · \(content.fileURLs.count) 项")
-        case .color: window.title = L("颜色预览")
-        case .text: window.title = L("文字预览")
+        case .image: title = L("图片预览 · \(content.width ?? 0) × \(content.height ?? 0)")
+        case .file: title = L("文件预览 · \(content.fileURLs.count) 项")
+        case .color: title = L("颜色预览")
+        case .text: title = L("文字预览")
         }
-        window.level = .floating; window.isReleasedWhenClosed = false
-        super.init(window: window)
-        window.delegate = self
         switch content.kind {
         case .text:
-            window.contentView = textView(content.text ?? "", frame: window.contentView!.bounds)
+            contentView = Self.makeTextView(content.text ?? "")
         case .file:
             let lines = content.fileURLs.map { url in
                 let state = FileManager.default.fileExists(atPath: url.path) ? "" : L("  [已移动或删除]")
                 return "\(url.lastPathComponent)\(state)\n\(url.path)"
             }
-            window.contentView = textView(lines.joined(separator: "\n\n"), frame: window.contentView!.bounds)
+            contentView = Self.makeTextView(lines.joined(separator: "\n\n"))
         case .color:
             if let value = content.text, let color = ContentCodec.color(from: value) {
-                window.contentView = PreviewColorView(color: color, label: value.trimmingCharacters(in: .whitespacesAndNewlines))
-            }
+                contentView = PreviewColorView(color: color, label: value.trimmingCharacters(in: .whitespacesAndNewlines))
+            } else { contentView = NSView() }
         case .image:
-            if let image = firstFrame(in: content.representations) {
-                window.contentView = PreviewImageView(image: image)
-            }
+            if let image = Self.firstFrame(in: content.representations) {
+                contentView = PreviewImageView(image: image)
+            } else { contentView = NSView() }
         }
-        window.center()
+        super.init(frame: .zero)
+        let label = NSTextField(labelWithString: title)
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        label.textColor = .secondaryLabelColor
+        let close = NSButton()
+        close.image = NSImage(systemSymbolName: "chevron.down", accessibilityDescription: nil)
+        close.target = self; close.action = #selector(closePreview)
+        close.isBordered = false; close.focusRingType = .none
+        close.toolTip = L("收起预览（Esc）"); close.setAccessibilityLabel(L("收起预览（Esc）"))
+        let separator = NSBox(); separator.boxType = .separator
+        for view in [label, close, contentView, separator] {
+            addSubview(view); view.translatesAutoresizingMaskIntoConstraints = false
+        }
+        let width = contentView.widthAnchor.constraint(equalTo: widthAnchor, constant: -32)
+        width.priority = .defaultHigh
+        NSLayoutConstraint.activate([
+            contentView.centerXAnchor.constraint(equalTo: centerXAnchor), width,
+            contentView.widthAnchor.constraint(lessThanOrEqualToConstant: 1100),
+            contentView.topAnchor.constraint(equalTo: topAnchor, constant: 44),
+            contentView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
+            label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            label.centerYAnchor.constraint(equalTo: close.centerYAnchor),
+            close.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            close.topAnchor.constraint(equalTo: topAnchor, constant: 10),
+            close.widthAnchor.constraint(equalToConstant: 28), close.heightAnchor.constraint(equalToConstant: 28),
+            separator.leadingAnchor.constraint(equalTo: leadingAnchor), separator.trailingAnchor.constraint(equalTo: trailingAnchor),
+            separator.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
     }
     required init?(coder: NSCoder) { fatalError() }
-    func windowWillClose(_ notification: Notification) { onClose?() }
-    private func textView(_ value: String, frame: NSRect) -> NSScrollView {
-        let scroll = NSScrollView(frame: frame)
-        scroll.autoresizingMask = [.width, .height]; scroll.hasVerticalScroller = true
+    @objc private func closePreview() { onClose?() }
+    private static func makeTextView(_ value: String) -> NSScrollView {
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 760, height: 360))
+        scroll.hasVerticalScroller = true
         let text = NSTextView(frame: scroll.bounds)
         text.isEditable = false; text.isSelectable = true; text.font = .systemFont(ofSize: 15)
         text.textColor = .labelColor; text.backgroundColor = .textBackgroundColor; text.string = value
@@ -76,7 +100,7 @@ final class PreviewController: NSWindowController, NSWindowDelegate {
         scroll.documentView = text
         return scroll
     }
-    private func firstFrame(in representations: [Representation]) -> NSImage? {
+    private static func firstFrame(in representations: [Representation]) -> NSImage? {
         for value in representations {
             guard let source = CGImageSourceCreateWithData(value.data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
                   let frame = CGImageSourceCreateThumbnailAtIndex(source, 0, [

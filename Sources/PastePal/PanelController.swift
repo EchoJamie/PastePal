@@ -30,6 +30,7 @@ final class HistorySearchCell: NSSearchFieldCell {
 
 enum PanelLayout {
     static let height: CGFloat = 356
+    static let previewHeight: CGFloat = 420
     static let cornerRadius: CGFloat = 18
     static let entranceDuration: TimeInterval = 0.16
     static let backgroundMaterial: NSVisualEffectView.Material = .popover
@@ -39,6 +40,10 @@ enum PanelLayout {
 
     static func frame(in screenFrame: NSRect) -> NSRect {
         NSRect(x: screenFrame.minX, y: screenFrame.minY, width: screenFrame.width, height: height)
+    }
+
+    static func expandedHeight(availableHeight: CGFloat) -> CGFloat {
+        max(height, min(height + previewHeight, availableHeight))
     }
 
     static func frame(at mouseLocation: NSPoint, screenFrames: [NSRect], fallback: NSRect?) -> NSRect? {
@@ -338,7 +343,8 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     private var searchScopeGroupID: String?
     private lazy var searchCoordinator = HistorySearchCoordinator(directory: model.store.directory)
     private let imageCache = CardImageCache()
-    private var preview: PreviewController?
+    private(set) var previewView: PreviewView?
+    private var previewEntryID: String?
     private var groupPicker: GroupPickerController?
     private var groupEditor: GroupEditorController?
     private(set) var groupCreationView: GroupCreationView?
@@ -375,8 +381,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     var searchScopeText: String { isSearchScopeControlVisible ? searchScopeChip.title : "" }
     var emptyStateTitle: String { emptyTitle.stringValue }
     var isGroupPickerVisible: Bool { groupPicker?.view.window === window && groupPicker != nil }
-    var hasPreviewController: Bool { preview != nil }
-    var previewWindow: NSWindow? { preview?.window }
+    var isPreviewVisible: Bool { previewView != nil }
     var groupPickerController: GroupPickerController? { groupPicker }
     var groupEditorController: GroupEditorController? { groupEditor }
     var isGroupDeleteConfirmationVisible: Bool { groupEditor?.isConfirmingDelete == true }
@@ -391,7 +396,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         let toolbarFrame = toolbar.convert(toolbar.bounds, to: background)
         return toolbarFrame.maxX + 16 <= background.bounds.maxX
     }
-    var preferredPanelHeight: CGFloat { PanelLayout.height }
+    var preferredPanelHeight: CGFloat { window?.frame.height ?? PanelLayout.height }
     var historyView: HistoryCollection { collection }
     var backgroundEffect: NSVisualEffectView { background.effectView }
     var panelRootView: NSView { background }
@@ -431,7 +436,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         collection.handleGroupJoinKey = { [weak self] event in self?.handleGroupJoinKey(event) ?? false }
         panel.onUseCurrentCard = { [weak self] in self?.use() }
         panel.isCardMode = { [weak self] in
-            self?.interactionMode == .cards && self?.isGroupInteractionVisible == false
+            self?.interactionMode == .cards && self?.isGroupInteractionVisible == false && self?.isPreviewVisible == false
         }
         panel.shouldUseCurrentCard = { [weak self] in self?.shouldRouteReturnToCards == true }
         panel.onAfterEvent = { [weak self] in
@@ -483,7 +488,6 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         queryGeneration += 1
         closing = true
         background.layer?.removeAnimation(forKey: "panelEntrance")
-        preview?.close(); preview = nil
         closeGroupInteraction()
         window?.orderOut(nil)
         closing = false
@@ -511,6 +515,15 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
             fallback: NSScreen.main?.frame
         ) else { return }
         window?.setFrame(frame, display: true)
+        resizeForPreview()
+    }
+
+    private func resizeForPreview() {
+        guard let window else { return }
+        var frame = window.frame
+        let available = (window.screen?.visibleFrame.maxY ?? (frame.minY + PanelLayout.height + PanelLayout.previewHeight)) - frame.minY
+        frame.size.height = isPreviewVisible ? PanelLayout.expandedHeight(availableHeight: available) : PanelLayout.height
+        window.setFrame(frame, display: isVisible)
     }
     private func prepareEntranceAnimation() {
         guard let layer = background.layer else { return }
@@ -540,12 +553,12 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         !applicationIsActive || hasDifferentKeyWindow
     }
     func windowDidResignKey(_ notification: Notification) {
-        guard !closing, !statusMenuOpen, preview?.window?.isVisible != true,
+        guard !closing, !statusMenuOpen,
               groupPicker == nil, groupEditor == nil else { return }
         let generation = focusLossGeneration
         DispatchQueue.main.async { [weak self] in
             guard let self, self.focusLossGeneration == generation, !self.statusMenuOpen,
-                  self.window?.isKeyWindow != true, self.preview?.window?.isVisible != true,
+                  self.window?.isKeyWindow != true,
                   self.groupPicker == nil, self.groupEditor == nil else { return }
             let anotherAppWindowIsKey = NSApp.isActive && NSApp.keyWindow != nil && NSApp.keyWindow !== self.window
             guard Self.shouldDismissAfterResigningKey(
@@ -619,10 +632,10 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         searchBar.widthAnchor.constraint(equalToConstant: 430).isActive = true
         searchBar.heightAnchor.constraint(equalToConstant: 28).isActive = true
         NSLayoutConstraint.activate([
-            idleToolbar.topAnchor.constraint(equalTo: background.topAnchor, constant: 13),
+            idleToolbar.bottomAnchor.constraint(equalTo: background.bottomAnchor, constant: -(PanelLayout.height - 13 - PanelLayout.toolbarHeight)),
             idleToolbar.centerXAnchor.constraint(equalTo: background.centerXAnchor),
             idleToolbar.heightAnchor.constraint(equalToConstant: PanelLayout.toolbarHeight),
-            searchToolbar.topAnchor.constraint(equalTo: background.topAnchor, constant: 13),
+            searchToolbar.bottomAnchor.constraint(equalTo: background.bottomAnchor, constant: -(PanelLayout.height - 13 - PanelLayout.toolbarHeight)),
             searchToolbar.centerXAnchor.constraint(equalTo: background.centerXAnchor),
             searchToolbar.heightAnchor.constraint(equalToConstant: PanelLayout.toolbarHeight)
         ])
@@ -643,7 +656,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         collection.onUse = { [weak self] index in self?.use(index: index) }
         collection.onMove = { [weak self] delta in self?.move(delta) }
         collection.onPreview = { [weak self] in self?.openPreview() }
-        collection.onClose = { [weak self] in self?.dismiss() }
+        collection.onClose = { [weak self] in self?.handlePanelCancel() }
         collection.onDelete = { [weak self] in self?.deleteSelection() }
         collection.onBeginSearch = { [weak self] event in self?.beginSearch(forwarding: event) }
         collection.onActivateCards = { [weak self] in self?.activateCards() }
@@ -651,7 +664,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         scroll.drawsBackground = false; scroll.autohidesScrollers = true; scroll.scrollerStyle = .overlay
         scroll.horizontalScrollElasticity = .allowed; scroll.verticalScrollElasticity = .none
         background.contentView.addSubview(scroll); scroll.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([scroll.topAnchor.constraint(equalTo: background.topAnchor, constant: 49), scroll.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: 8), scroll.trailingAnchor.constraint(equalTo: background.trailingAnchor, constant: -8), scroll.heightAnchor.constraint(equalToConstant: PanelLayout.collectionHeight)])
+        NSLayoutConstraint.activate([scroll.bottomAnchor.constraint(equalTo: background.bottomAnchor, constant: -7), scroll.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: 8), scroll.trailingAnchor.constraint(equalTo: background.trailingAnchor, constant: -8), scroll.heightAnchor.constraint(equalToConstant: PanelLayout.collectionHeight)])
         emptyIcon.symbolConfiguration = .init(pointSize: 28, weight: .light)
         emptyIcon.contentTintColor = PanelPalette.secondaryText
         emptyTitle.font = .systemFont(ofSize: 14, weight: .semibold); emptyTitle.textColor = PanelPalette.primaryText; emptyTitle.alignment = .center
@@ -729,6 +742,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         } else {
             selectedID = (try? values.entry(at: 0))?.id
         }
+        if previewEntryID != selectedID { closePreview() }
         collection.reloadData()
         if let selectedID, let index = try? values.index(of: selectedID) {
             collection.selectionIndexPaths = [IndexPath(item: index, section: 0)]
@@ -767,6 +781,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
 
     func beginSearch(selectAll: Bool) {
         guard !isGroupInteractionVisible else { return }
+        closePreview()
         enterSearchState()
         window?.makeFirstResponder(search)
         guard let editor = search.currentEditor() as? NSTextView
@@ -830,6 +845,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         if let groupLabelEditor { groupLabelEditor.focus(); return }
         if let groupEditor { groupEditor.focus(); return }
         if let groupPicker { groupPicker.focus(); return }
+        if let textView = previewView?.textView { window?.makeFirstResponder(textView); return }
         if interactionMode == .search {
             beginSearch(selectAll: false)
         } else {
@@ -855,6 +871,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     }
 
     private func handlePanelCancel() {
+        if previewEntryID != nil { closePreview(); return }
         if groupJoinEntryID != nil { closeGroupInteraction(); restorePanelFocus(); return }
         if groupCreationView != nil { closeGroupInteraction(); restorePanelFocus(); return }
         if groupLabelEditor != nil { cancelGroupRename(); return }
@@ -893,6 +910,8 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
                 : L("输入筛选   ↓ 选择列表   ↩ 确认   Esc 返回")
         } else if inlineGroupView != nil {
             keyboardHint = L("Esc 返回")
+        } else if isPreviewVisible {
+            keyboardHint = L("收起预览（Esc）")
         } else if interactionMode == .search {
             keyboardHint = L("\(previous) / \(next) 切范围   ↩ 完成   Esc 取消")
         } else if !search.stringValue.isEmpty {
@@ -957,6 +976,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
             hint.stringValue = L("请先用 + 新建分组"); hint.toolTip = hint.stringValue
             return
         }
+        closePreview()
         groupJoinEntryID = selectedID
         groupJoinTargetID = model.groups.first { !model.groupIDs(for: selectedID).contains($0.id) }?.id ?? model.groups.first?.id
         refreshGroupButtons(); updateToolbarPresentation(); updateActions()
@@ -993,6 +1013,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         updateActions()
     }
     func closeGroupInteraction() {
+        closePreview()
         if groupJoinEntryID != nil || cardDragEntryID != nil {
             groupJoinEntryID = nil; groupJoinTargetID = nil; cardDragEntryID = nil
             refreshGroupButtons(); updateToolbarPresentation()
@@ -1025,6 +1046,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     }
     private func move(_ delta: Int) {
         guard (results?.isEmpty == false) else { return }
+        closePreview()
         let current = resultIndex(of: selectedID) ?? (delta > 0 ? -1 : (results?.count ?? 0))
         let index = min(max(current + delta, 0), (results?.count ?? 0) - 1)
         let indexPath = IndexPath(item: index, section: 0)
@@ -1056,19 +1078,39 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     }
     private func openPreview() {
         guard let selectedID else { return }
+        previewEntryID = selectedID
         model.loadContent(id: selectedID) { [weak self] result in
-            guard let self, self.isVisible, self.selectedID == selectedID else { return }
+            guard let self, self.displayPrepared, self.previewEntryID == selectedID, self.selectedID == selectedID else { return }
             switch result {
             case .success(let content):
-                self.preview = PreviewController(content: content)
-                self.preview?.onClose = { [weak self] in
-                    self?.preview = nil
-                    self?.restorePanelFocus()
-                }
-                self.preview?.showWindow(nil)
-            case .failure(let error): self.showFeedback(error.localizedDescription)
+                self.previewView?.removeFromSuperview()
+                let view = PreviewView(content: content)
+                self.previewView = view
+                view.onClose = { [weak self] in self?.closePreview() }
+                self.background.contentView.addSubview(view)
+                view.translatesAutoresizingMaskIntoConstraints = false
+                NSLayoutConstraint.activate([
+                    view.leadingAnchor.constraint(equalTo: self.background.leadingAnchor, constant: 8),
+                    view.trailingAnchor.constraint(equalTo: self.background.trailingAnchor, constant: -8),
+                    view.topAnchor.constraint(equalTo: self.background.topAnchor),
+                    view.bottomAnchor.constraint(equalTo: self.background.bottomAnchor, constant: -PanelLayout.height)
+                ])
+                self.resizeForPreview()
+                self.focusForCurrentMode()
+                self.updateActions()
+            case .failure(let error):
+                self.closePreview()
+                self.showFeedback(error.localizedDescription)
             }
         }
+    }
+    func closePreview() {
+        guard previewEntryID != nil else { return }
+        previewEntryID = nil
+        if !closing { focusCards() }
+        previewView?.removeFromSuperview(); previewView = nil
+        resizeForPreview()
+        updateActions()
     }
     func numberOfSections(in collectionView: NSCollectionView) -> Int { 1 }
     func collectionView(_ collectionView: NSCollectionView, canDragItemsAt indexPaths: Set<IndexPath>, with event: NSEvent) -> Bool {
@@ -1129,6 +1171,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
         guard let index = indexPaths.first?.item, results?.indices.contains(index) == true else { return }
         selectedID = resultEntry(at: index)?.id; updateActions()
+        if previewEntryID != selectedID { closePreview() }
     }
     func controlTextDidBeginEditing(_ notification: Notification) {
         (search.currentEditor() as? NSTextView)?.insertionPointColor = PanelPalette.primaryText
@@ -1499,6 +1542,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     func beginGroupRename(_ groupID: String) {
         guard isVisible, inlineGroupView == nil,
               let group = model.groups.first(where: { $0.id == groupID }) else { return }
+        closePreview()
         if selectedGroupID != groupID { selectGroup(groupID) }
         let editor = GroupLabelEditor(groupID: groupID, name: group.name)
         editor.onCancel = { [weak self] in self?.cancelGroupRename() }
