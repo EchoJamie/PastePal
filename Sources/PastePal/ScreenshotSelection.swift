@@ -282,11 +282,7 @@ enum ScreenshotDragPhase { case begin, change, end }
     private func positionToolbar() {
         guard let selection = region.selection, let toolbar, let toolbarContent else { return }
         let targetScreen = NSScreen.screens.max { $0.frame.intersection(selection).area < $1.frame.intersection(selection).area }?.visibleFrame ?? frames.max { $0.bounds.intersection(selection).area < $1.bounds.intersection(selection).area }?.bounds ?? region.desktopBounds
-        let width = toolbarContent.preferredSize.width, height = toolbarContent.preferredSize.height
-        let x = min(max(selection.midX - width / 2, targetScreen.minX + 8), targetScreen.maxX - width - 8)
-        let below = selection.minY - height - 12
-        let y = below >= targetScreen.minY + 8 ? below : min(selection.maxY + 12, targetScreen.maxY - height - 8)
-        toolbar.setFrame(CGRect(x: x, y: y, width: width, height: height), display: true)
+        toolbarContent.position(near: selection, in: toolbarContent.hasBeenDragged ? (toolbar.screen?.visibleFrame ?? targetScreen) : targetScreen)
     }
 
     private func hoverWindow(at point: CGPoint) {

@@ -70,6 +70,7 @@ final class ScreenshotAnnotationToolbar: NSVisualEffectView {
     private var obscureOptions = NSStackView()
     private var options = NSStackView()
     private var cursorTracking: NSTrackingArea?
+    private(set) var hasBeenDragged = false
     var onTool: ((ScreenshotAnnotationModel.Tool) -> Void)?
     var onColor: ((ScreenshotAnnotationColor) -> Void)?
     var onUndo: (() -> Void)?
@@ -174,6 +175,22 @@ final class ScreenshotAnnotationToolbar: NSVisualEffectView {
         update(tool: nil, color: .red, canUndo: false)
     }
     required init?(coder: NSCoder) { fatalError() }
+    override var mouseDownCanMoveWindow: Bool { false }
+    override func mouseDown(with event: NSEvent) {
+        hasBeenDragged = true
+        window?.performDrag(with: event)
+    }
+    func position(near selection: CGRect, in screen: CGRect) {
+        guard let window else { return }
+        let width = preferredSize.width, height = preferredSize.height
+        let below = selection.minY - height - 12
+        let origin = hasBeenDragged ? window.frame.origin : CGPoint(
+            x: selection.midX - width / 2,
+            y: below >= screen.minY + 8 ? below : selection.maxY + 12)
+        let x = max(screen.minX + 8, min(origin.x, screen.maxX - width - 8))
+        let y = max(screen.minY + 8, min(origin.y, screen.maxY - height - 8))
+        window.setFrame(CGRect(x: x, y: y, width: width, height: height), display: window.isVisible)
+    }
     override func resetCursorRects() { addCursorRect(bounds, cursor: .arrow) }
     override func updateTrackingAreas() {
         if let cursorTracking { removeTrackingArea(cursorTracking) }

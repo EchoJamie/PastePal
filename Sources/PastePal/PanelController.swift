@@ -720,7 +720,8 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
             guard let self, self.queryGeneration == generation, self.displayPrepared else { return }
             switch result {
             case .success(let values):
-                self.render(values, query: query, groupID: groupID, preferredSelection: self.selectedID)
+                self.render(values, query: query, groupID: groupID, preferredSelection: self.selectedID,
+                            fallbackIndex: self.resultIndex(of: self.selectedID) ?? 0)
             case .failure(let error): self.showFeedback(L("无法读取历史：\(error.localizedDescription)"))
             }
         }
@@ -735,17 +736,18 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         } catch { showFeedback(L("无法读取历史：\(error.localizedDescription)")) }
     }
 
-    private func render(_ values: HistoryQueryResults, query: String, groupID: String?, preferredSelection: String?) {
+    private func render(_ values: HistoryQueryResults, query: String, groupID: String?, preferredSelection: String?, fallbackIndex: Int = 0) {
         results = values
         if let preferredSelection, (try? values.index(of: preferredSelection)) != nil {
             selectedID = preferredSelection
         } else {
-            selectedID = (try? values.entry(at: 0))?.id
+            selectedID = (try? values.entry(at: min(fallbackIndex, max(0, values.count - 1))))?.id
         }
         if previewEntryID != selectedID { closePreview() }
         collection.reloadData()
         if let selectedID, let index = try? values.index(of: selectedID) {
             collection.selectionIndexPaths = [IndexPath(item: index, section: 0)]
+            if selectedID != preferredSelection { reveal(IndexPath(item: index, section: 0)) }
         } else {
             collection.selectionIndexPaths = []
         }

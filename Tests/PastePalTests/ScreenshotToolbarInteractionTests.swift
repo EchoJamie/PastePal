@@ -3,6 +3,42 @@ import AppKit
 @testable import PastePal
 
 final class ScreenshotToolbarInteractionTests: AppTestSupport {
+    @MainActor func testToolbarDragAndToolChangesKeepManualPosition() throws {
+        let toolbar = ScreenshotAnnotationToolbar()
+        let window = ToolbarDragTestPanel(contentRect: CGRect(origin: .zero, size: toolbar.preferredSize), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = toolbar
+        defer { window.contentView = nil; window.close() }
+        let screen = CGRect(x: -1440, y: 0, width: 1440, height: 900)
+        let selection = screen.insetBy(dx: 20, dy: 20)
+        toolbar.onSizeChange = { toolbar.position(near: selection, in: screen) }
+        defer { toolbar.onSizeChange = nil }
+        toolbar.position(near: selection, in: screen)
+        toolbar.layoutSubtreeIfNeeded()
+        let point = toolbar.convert(CGPoint(x: toolbar.bounds.midX, y: 3), to: nil)
+        let event = try XCTUnwrap(NSEvent.mouseEvent(with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
+        let hit = try XCTUnwrap(toolbar.hitTest(toolbar.convert(point, from: nil)))
+        XCTAssertFalse(hit is NSButton)
+        hit.mouseDown(with: event)
+        XCTAssertTrue(window.receivedDrag)
+        XCTAssertTrue(toolbar.hasBeenDragged)
+        let movedOrigin = CGPoint(x: -1300, y: 200)
+        XCTAssertEqual(window.frame.origin, movedOrigin)
+        toolbar.onTool = { toolbar.update(tool: $0, color: .red, canUndo: false) }
+        defer { toolbar.onTool = nil }
+        toolbar.toolButtons[.rectangle]?.performClick(nil)
+        XCTAssertEqual(window.frame.origin, movedOrigin)
+        XCTAssertEqual(window.frame.size, toolbar.preferredSize)
+        toolbar.position(near: selection.insetBy(dx: 50, dy: 50), in: screen)
+        XCTAssertEqual(window.frame.origin, movedOrigin)
+        toolbar.update(tool: nil, color: .red, canUndo: false)
+        XCTAssertEqual(window.frame.origin, movedOrigin)
+        window.setFrameOrigin(CGPoint(x: screen.maxX - 20, y: screen.maxY - 20))
+        toolbar.update(tool: .rectangle, color: .red, canUndo: false)
+        XCTAssertTrue(screen.contains(window.frame))
+        XCTAssertFalse(window.isVisible)
+    }
+
     @MainActor func testIconToolsPaletteSelectionAndUndoAvailability() throws {
         _ = NSApplication.shared
         let toolbar = ScreenshotAnnotationToolbar()
@@ -77,5 +113,13 @@ final class ScreenshotToolbarInteractionTests: AppTestSupport {
             }
             XCTAssertEqual(points, Array(repeating: CGPoint(x: window.frame.minX + 30, y: window.frame.minY + 40), count: 3))
         }
+    }
+}
+
+private final class ToolbarDragTestPanel: NSPanel {
+    var receivedDrag = false
+    override func performDrag(with event: NSEvent) {
+        receivedDrag = true
+        setFrameOrigin(CGPoint(x: -1300, y: 200))
     }
 }
