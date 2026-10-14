@@ -202,6 +202,7 @@
   "撤销": "Undo",
   "撤销标注": "Undo Annotation",
   "收起预览（Esc）": "Collapse Preview (Esc)",
+  "滚轮或捏合缩放，拖动查看，双击切换原图大小与适应": "Scroll or pinch to zoom, drag to pan, double-click for actual size or fit",
   "数据目录": "Data Folder",
   "数据迁移：{0}；设置迁移：{1}": "Data migration: {0}; settings migration: {1}",
   "文件": "File",

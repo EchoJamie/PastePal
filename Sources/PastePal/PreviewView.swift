@@ -3,11 +3,77 @@ import AppKit
 import ClipboardCore
 import ImageIO
 
-final class PreviewImageView: NSView {
+private final class PreviewImageClipView: NSClipView {
+    override func constrainBoundsRect(_ proposedBounds: NSRect) -> NSRect {
+        var rect = super.constrainBoundsRect(proposedBounds)
+        guard let documentView else { return rect }
+        if rect.width > documentView.frame.width { rect.origin.x = (documentView.frame.width - rect.width) / 2 }
+        if rect.height > documentView.frame.height { rect.origin.y = (documentView.frame.height - rect.height) / 2 }
+        return rect
+    }
+}
+
+final class PreviewImageView: NSScrollView {
     let image: NSImage
-    init(image: NSImage) { self.image = image; super.init(frame: .zero) }
+    private var initiallyFitted = false
+    var fitScale: CGFloat { min(1, contentSize.width / image.size.width, contentSize.height / image.size.height) }
+    init(image: NSImage) {
+        self.image = image
+        super.init(frame: .zero)
+        contentView = PreviewImageClipView()
+        documentView = PreviewImageCanvas(image: image)
+        hasHorizontalScroller = true; hasVerticalScroller = true
+        autohidesScrollers = true; scrollerStyle = .overlay
+        drawsBackground = false; allowsMagnification = true
+        minMagnification = 0.001; maxMagnification = 4
+        let help = L("滚轮或捏合缩放，拖动查看，双击切换原图大小与适应")
+        toolTip = help; documentView?.toolTip = help
+        setAccessibilityHelp(help)
+    }
     required init?(coder: NSCoder) { fatalError() }
-    override func draw(_ dirtyRect: NSRect) { drawCheckerboard(in: bounds); drawAspectFit(image, in: bounds.insetBy(dx: 16, dy: 16)) }
+    override func layout() {
+        super.layout()
+        guard !initiallyFitted, contentSize.width > 0, contentSize.height > 0 else { return }
+        initiallyFitted = true
+        minMagnification = fitScale
+        magnification = fitScale
+    }
+    func toggleZoom(at point: NSPoint) {
+        setMagnification(magnification > fitScale + 0.001 ? fitScale : 1, centeredAt: point)
+    }
+    override func scrollWheel(with event: NSEvent) {
+        let delta = event.scrollingDeltaY
+        guard delta.isFinite, delta != 0 else { return }
+        let factor = exp(min(0.5, max(-0.5, delta * (event.hasPreciseScrollingDeltas ? 0.01 : 0.1))))
+        let point = contentView.convert(event.locationInWindow, from: nil)
+        setMagnification(min(maxMagnification, max(fitScale, magnification * factor)), centeredAt: point)
+    }
+}
+
+private final class PreviewImageCanvas: NSView {
+    let image: NSImage
+    private var dragPoint: NSPoint?
+    init(image: NSImage) { self.image = image; super.init(frame: NSRect(origin: .zero, size: image.size)) }
+    required init?(coder: NSCoder) { fatalError() }
+    override func draw(_ dirtyRect: NSRect) { drawCheckerboard(in: dirtyRect); drawAspectFit(image, in: bounds) }
+    override var mouseDownCanMoveWindow: Bool { false }
+    override func resetCursorRects() { addCursorRect(visibleRect, cursor: .openHand) }
+    override func mouseDown(with event: NSEvent) {
+        if event.clickCount == 2, let scroll = enclosingScrollView as? PreviewImageView {
+            scroll.toggleZoom(at: scroll.contentView.convert(event.locationInWindow, from: nil))
+            dragPoint = nil
+        } else { dragPoint = event.locationInWindow }
+    }
+    override func mouseDragged(with event: NSEvent) {
+        guard let dragPoint, let scroll = enclosingScrollView else { return }
+        var rect = scroll.contentView.bounds
+        rect.origin.x -= (event.locationInWindow.x - dragPoint.x) / scroll.magnification
+        rect.origin.y -= (event.locationInWindow.y - dragPoint.y) / scroll.magnification
+        scroll.contentView.scroll(to: scroll.contentView.constrainBoundsRect(rect).origin)
+        scroll.reflectScrolledClipView(scroll.contentView)
+        self.dragPoint = event.locationInWindow
+    }
+    override func mouseUp(with event: NSEvent) { dragPoint = nil }
 }
 final class PreviewColorView: NSView {
     let color: ClipboardColor
@@ -70,11 +136,13 @@ final class PreviewView: NSView {
         for view in [label, close, contentView, separator] {
             addSubview(view); view.translatesAutoresizingMaskIntoConstraints = false
         }
-        let width = contentView.widthAnchor.constraint(equalTo: widthAnchor, constant: -32)
-        width.priority = .defaultHigh
+        let preferredWidth = textView != nil
+            ? contentView.widthAnchor.constraint(equalToConstant: 760)
+            : contentView.widthAnchor.constraint(equalTo: widthAnchor, constant: -32)
+        preferredWidth.priority = .defaultLow
         NSLayoutConstraint.activate([
-            contentView.centerXAnchor.constraint(equalTo: centerXAnchor), width,
-            contentView.widthAnchor.constraint(lessThanOrEqualToConstant: 1100),
+            contentView.centerXAnchor.constraint(equalTo: centerXAnchor), preferredWidth,
+            contentView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, constant: -32),
             contentView.topAnchor.constraint(equalTo: topAnchor, constant: 44),
             contentView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
             label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
@@ -103,11 +171,14 @@ final class PreviewView: NSView {
     private static func firstFrame(in representations: [Representation]) -> NSImage? {
         for value in representations {
             guard let source = CGImageSourceCreateWithData(value.data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+                  let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let width = properties[kCGImagePropertyPixelWidth] as? Int,
+                  let height = properties[kCGImagePropertyPixelHeight] as? Int,
                   let frame = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                     kCGImageSourceCreateThumbnailFromImageAlways: true,
                     kCGImageSourceCreateThumbnailWithTransform: true,
-                    kCGImageSourceThumbnailMaxPixelSize: 1_600,
-                    kCGImageSourceShouldCacheImmediately: true
+                    kCGImageSourceThumbnailMaxPixelSize: max(width, height),
+                    kCGImageSourceShouldCacheImmediately: false
                   ] as CFDictionary) else { continue }
             return NSImage(cgImage: frame, size: NSSize(width: frame.width, height: frame.height))
         }

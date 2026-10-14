@@ -743,7 +743,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         } else {
             selectedID = (try? values.entry(at: min(fallbackIndex, max(0, values.count - 1))))?.id
         }
-        if previewEntryID != selectedID { closePreview() }
+        updatePreviewForSelection()
         collection.reloadData()
         if let selectedID, let index = try? values.index(of: selectedID) {
             collection.selectionIndexPaths = [IndexPath(item: index, section: 0)]
@@ -847,7 +847,6 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         if let groupLabelEditor { groupLabelEditor.focus(); return }
         if let groupEditor { groupEditor.focus(); return }
         if let groupPicker { groupPicker.focus(); return }
-        if let textView = previewView?.textView { window?.makeFirstResponder(textView); return }
         if interactionMode == .search {
             beginSearch(selectAll: false)
         } else {
@@ -1048,13 +1047,13 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     }
     private func move(_ delta: Int) {
         guard (results?.isEmpty == false) else { return }
-        closePreview()
         let current = resultIndex(of: selectedID) ?? (delta > 0 ? -1 : (results?.count ?? 0))
         let index = min(max(current + delta, 0), (results?.count ?? 0) - 1)
         let indexPath = IndexPath(item: index, section: 0)
         selectedID = resultEntry(at: index)?.id; collection.selectionIndexPaths = [indexPath]
         reveal(indexPath)
         window?.makeFirstResponder(collection); updateActions()
+        updatePreviewForSelection()
     }
     private func reveal(_ indexPath: IndexPath) {
         collection.layoutSubtreeIfNeeded()
@@ -1078,8 +1077,12 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
         if let groupID = resultGroupID { model.remove(entryID: selectedID, fromGroup: groupID) }
         else { model.delete(id: selectedID) }
     }
+    private func updatePreviewForSelection() {
+        guard previewEntryID != nil, previewEntryID != selectedID else { return }
+        openPreview()
+    }
     private func openPreview() {
-        guard let selectedID else { return }
+        guard let selectedID else { closePreview(); return }
         previewEntryID = selectedID
         model.loadContent(id: selectedID) { [weak self] result in
             guard let self, self.displayPrepared, self.previewEntryID == selectedID, self.selectedID == selectedID else { return }
@@ -1098,7 +1101,6 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
                     view.bottomAnchor.constraint(equalTo: self.background.bottomAnchor, constant: -PanelLayout.height)
                 ])
                 self.resizeForPreview()
-                self.focusForCurrentMode()
                 self.updateActions()
             case .failure(let error):
                 self.closePreview()
@@ -1173,7 +1175,7 @@ final class PanelController: NSWindowController, NSCollectionViewDataSource, NSC
     func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
         guard let index = indexPaths.first?.item, results?.indices.contains(index) == true else { return }
         selectedID = resultEntry(at: index)?.id; updateActions()
-        if previewEntryID != selectedID { closePreview() }
+        updatePreviewForSelection()
     }
     func controlTextDidBeginEditing(_ notification: Notification) {
         (search.currentEditor() as? NSTextView)?.insertionPointColor = PanelPalette.primaryText
