@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+release_tag=
+release_commit=
+while read -r local_ref local_oid remote_ref remote_oid; do
+  [[ "$local_ref" != '(delete)' && "$remote_ref" == refs/tags/v* ]] || continue
+  tag="${remote_ref#refs/tags/}"
+  [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo '发布标签必须为 vX.Y.Z' >&2; exit 1; }
+  commit="$(git rev-parse "$local_oid^{commit}")"
+  [[ "$commit" == "$(git rev-parse HEAD)" ]] || { echo '请检出发布标签对应的提交后再推送' >&2; exit 1; }
+  version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' resources/Info.plist)"
+  [[ "$tag" == "v$version" ]] || { echo '发布标签与 Info.plist 版本不一致' >&2; exit 1; }
+  release_tag="$tag"
+  release_commit="$commit"
+done
+
+[[ -n "$release_tag" ]] || exit 0
+[[ -z "$(git status --porcelain)" ]] || { echo '请提交或清理工作区改动，确保测试与发布标签源码一致' >&2; exit 1; }
+echo "检查 ${release_tag}：文档与完整 Release 测试"
+python3 scripts/verify-docs.py
+./scripts/swift-env.sh test -c release
+[[ "$(git rev-parse HEAD)" == "$release_commit" && -z "$(git status --porcelain)" ]] || {
+  echo '检查期间源码发生变化，停止发布；请重新核对并推送' >&2
+  exit 1
+}

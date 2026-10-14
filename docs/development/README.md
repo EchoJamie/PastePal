@@ -55,6 +55,8 @@ python3 scripts/verify-docs.py
 
 ## GitHub Release 自动发布
 
+首次克隆后执行 `git config --local core.hooksPath .githooks`，启用仓库的发布检查。推送 `vX.Y.Z` 标签时，`pre-push` 会核对版本、标签提交与当前 HEAD、工作区是否干净，再执行文档检查和与 CI 相同的 `./scripts/swift-env.sh test -c release`；任何一步失败都会阻止推送。普通分支推送不执行该检查。完整原生交互测试可能显示窗口，应在可运行 UI 测试的桌面会话执行。hook 自身可通过 `python3 Tests/ReleaseHookTests/test_release_hook.py` 验证，使用临时本地仓库，不连接 GitHub。
+
 `.github/workflows/release.yml` 在推送 `vX.Y.Z` 标签时执行，也可手动输入已存在的标签。流程核对标签与 `resources/Info.plist` 版本 → Release 测试 → 临时证书导入 → 正式应用与 DMG → 上传资产 → 发布 Release。使用 `macos-15` 的 arm64 runner，只交付 Apple Silicon 版本。
 
 证书机制与 QuotaPeek 一致：加密 P12 与密码分别存入仓库 Actions Secrets，发布作业临时导入，构建后清理。首次接入，在 GitHub 仓库 Settings → Secrets and variables → Actions 中配置：

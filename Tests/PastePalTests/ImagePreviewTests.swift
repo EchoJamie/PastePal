@@ -4,6 +4,24 @@ import XCTest
 @testable import PastePal
 
 final class ImagePreviewTests: AppTestSupport {
+    @MainActor func testFitCentersImageAcrossViewportSizes() throws {
+        for size in [NSSize(width: 600, height: 180), NSSize(width: 601, height: 181), NSSize(width: 1408, height: 364), NSSize(width: 1408, height: 331)] {
+            let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: .borderless, backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            defer { window.close() }
+            let scroll = PreviewImageView(image: NSImage(size: NSSize(width: 3200, height: 1800)))
+            scroll.wantsLayer = true
+            window.contentView = scroll
+            window.layoutIfNeeded()
+            scroll.layoutSubtreeIfNeeded()
+            try assertImageFitsAndIsCentered(scroll)
+            scroll.toggleZoom(at: .zero)
+            XCTAssertEqual(scroll.magnification, 1, accuracy: 0.001)
+            scroll.toggleZoom(at: .zero)
+            try assertImageFitsAndIsCentered(scroll)
+        }
+    }
+
     @MainActor func testLargeImageKeepsPixelsAndSupportsZoomPanAndFitWithoutResizingPanel() async throws {
         let context = try XCTUnwrap(CGContext(data: nil, width: 3200, height: 1800, bitsPerComponent: 8, bytesPerRow: 12800, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         context.setFillColor(CGColor(gray: 1, alpha: 1))
@@ -34,8 +52,7 @@ final class ImagePreviewTests: AppTestSupport {
         XCTAssertGreaterThan(try XCTUnwrap(pixels.colorAt(x: 1599, y: 900)?.usingColorSpace(.sRGB)).redComponent, 0.99)
         XCTAssertGreaterThan(scroll.frame.width, 760, "图片不受文本阅读宽度限制")
         XCTAssertEqual(scroll.magnification, scroll.fitScale, accuracy: 0.001)
-        XCTAssertEqual(scroll.contentView.bounds.midX, 1600, accuracy: 1)
-        XCTAssertEqual(scroll.contentView.bounds.midY, 900, accuracy: 1)
+        try assertImageFitsAndIsCentered(scroll)
         XCTAssertTrue(scroll.allowsMagnification)
         let frame = window.frame
         let point = canvas.convert(CGPoint(x: 1600, y: 900), to: nil)
@@ -56,12 +73,24 @@ final class ImagePreviewTests: AppTestSupport {
         XCTAssertGreaterThan(scroll.magnification, 1)
         canvas.mouseDown(with: try mouse(.leftMouseDown, point, clicks: 2))
         XCTAssertEqual(scroll.magnification, scroll.fitScale, accuracy: 0.001)
-        XCTAssertEqual(scroll.contentView.bounds.midX, 1600, accuracy: 1)
-        XCTAssertEqual(scroll.contentView.bounds.midY, 900, accuracy: 1)
+        try assertImageFitsAndIsCentered(scroll)
         XCTAssertEqual(window.frame, frame)
         XCTAssertTrue(panel.isCollectionFocused)
         panel.historyView.keyDown(with: try keyEvent(53, ""))
         XCTAssertFalse(panel.isPreviewVisible)
         XCTAssertFalse(window.isVisible)
+    }
+
+    @MainActor private func assertImageFitsAndIsCentered(_ scroll: PreviewImageView, file: StaticString = #filePath, line: UInt = #line) throws {
+        let canvas = try XCTUnwrap(scroll.documentView, file: file, line: line)
+        // 用显示像素判断对齐；原图坐标中的固定容差会随缩放比例改变实际精度。
+        let image = scroll.convertToBacking(scroll.convert(canvas.bounds, from: canvas))
+        let viewport = scroll.convertToBacking(scroll.convert(scroll.contentView.bounds, from: scroll.contentView))
+        XCTAssertEqual(image.midX, viewport.midX, accuracy: 1, file: file, line: line)
+        XCTAssertEqual(image.midY, viewport.midY, accuracy: 1, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(image.minX, viewport.minX - 1, file: file, line: line)
+        XCTAssertLessThanOrEqual(image.maxX, viewport.maxX + 1, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(image.minY, viewport.minY - 1, file: file, line: line)
+        XCTAssertLessThanOrEqual(image.maxY, viewport.maxY + 1, file: file, line: line)
     }
 }
