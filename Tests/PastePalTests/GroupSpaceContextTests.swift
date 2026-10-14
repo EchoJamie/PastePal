@@ -5,7 +5,7 @@ import ClipboardCore
 @testable import PastePal
 
 final class GroupSpaceContextTests: AppTestSupport {
-    @MainActor func testSpaceAddsInHorizontalGroupsButPreviewsCardsAndDoesNothingInEmptyCards() async throws {
+    @MainActor func testDesktopSpaceAddsInHorizontalGroupsButPreviewsCardsAndDoesNothingInEmptyCards() async throws {
         let (model, panel) = try await makePanel(["卡片预览内容"])
         defer { panel.dismiss() }
         let group = try model.store.createGroup(name: "目标")
@@ -37,7 +37,7 @@ final class GroupSpaceContextTests: AppTestSupport {
         XCTAssertNil(board.string(forType: .string))
     }
 
-    @MainActor func testSpaceEditsManagementSearchAndConfirmsOnlyFocusedGroupList() async throws {
+    @MainActor func testDesktopSpaceEditsManagementSearchAndConfirmsOnlyFocusedGroupList() async throws {
         let (model, panel) = try await makePanel(["内容"])
         defer { panel.dismiss() }
         _ = try model.store.createGroup(name: "工作 资料")
@@ -63,7 +63,7 @@ final class GroupSpaceContextTests: AppTestSupport {
         XCTAssertNil(board.string(forType: .string))
     }
 
-    @MainActor func testSpaceRemainsTextInputInSearchCreationAndRenameIncludingMarkedText() async throws {
+    @MainActor func testDesktopSpaceRemainsTextInputInSearchCreationAndRenameIncludingMarkedText() async throws {
         let (model, panel) = try await makePanel(["内容"])
         defer { panel.dismiss() }
         let group = try model.store.createGroup(name: "原名")

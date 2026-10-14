@@ -5,7 +5,7 @@ import ClipboardCore
 @testable import PastePal
 
 final class SettingsDockPresenceTests: AppTestSupport {
-    @MainActor func testDockFollowsSettingsSessionAndReopenRestoresExistingWindow() async throws {
+    @MainActor func testDesktopDockFollowsSettingsSessionAndReopenRestoresExistingWindow() async throws {
         _ = NSApplication.shared
         let originalPolicy = NSApp.activationPolicy()
         let model = try AppModel(directory: directory, settings: SettingsStore(defaults: defaults), pasteboard: board)

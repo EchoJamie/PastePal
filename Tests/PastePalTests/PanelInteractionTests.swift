@@ -6,7 +6,7 @@ import ClipboardCore
 @testable import PastePal
 
 final class PanelInteractionTests: AppTestSupport {
-    @MainActor func testWindowDispatchRightThenReturnUsesSecondCard() async throws {
+    @MainActor func testDesktopWindowDispatchRightThenReturnUsesSecondCard() async throws {
         let (model, panel) = try await makePanel(["第一条", "第二条", "第三条"])
         panel.show()
         panel.beginSearch(selectAll: false)
@@ -33,7 +33,7 @@ final class PanelInteractionTests: AppTestSupport {
 
     @MainActor func testArrowSelectionKeepsEveryCardFullyVisibleAcrossBothEdges() async throws {
         let (_, panel) = try await makePanel((1...12).map { "第\($0)条" })
-        panel.show()
+        panel.prepareForDisplay()
         defer { panel.dismiss() }
         let window = try XCTUnwrap(panel.window)
         window.setFrame(NSRect(x: window.frame.minX, y: window.frame.minY, width: 900, height: window.frame.height), display: true)
@@ -62,7 +62,7 @@ final class PanelInteractionTests: AppTestSupport {
         XCTAssertEqual(panel.selectedEntryID, panel.visibleEntryIDs.first)
     }
 
-    @MainActor func testWindowDispatchedMouseClicksKeepPanelOpenAndRouteControls() async throws {
+    @MainActor func testDesktopWindowDispatchedMouseClicksKeepPanelOpenAndRouteControls() async throws {
         let (model, panel) = try await makePanel(["第一条", "第二条"])
         let group = try model.store.createGroup(name: "工作")
         model.refresh(); try await waitUntil { panel.groupLabelTitles == ["工作"] }
@@ -110,7 +110,7 @@ final class PanelInteractionTests: AppTestSupport {
         panel.dismiss()
     }
 
-    @MainActor func testWindowDispatchedDoubleClickUsesCardAndClosesPanel() async throws {
+    @MainActor func testDesktopWindowDispatchedDoubleClickUsesCardAndClosesPanel() async throws {
         let (model, panel) = try await makePanel(["双击使用"])
         panel.show()
         let window = try XCTUnwrap(panel.window)
@@ -125,7 +125,7 @@ final class PanelInteractionTests: AppTestSupport {
         XCTAssertEqual(model.entries.first?.text, "双击使用")
     }
 
-    @MainActor func testOutsideMonitorIgnoresPanelCoordinatesAndDismissesOutsideCoordinates() async throws {
+    @MainActor func testDesktopOutsideMonitorIgnoresPanelCoordinatesAndDismissesOutsideCoordinates() async throws {
         let (_, panel) = try await makePanel(["保留"])
         panel.show()
         let window = try XCTUnwrap(panel.window)
@@ -152,7 +152,7 @@ final class PanelInteractionTests: AppTestSupport {
         ))
     }
 
-    @MainActor func testStatusMenuSelectionActionsRequireVisibleCardState() async throws {
+    @MainActor func testDesktopStatusMenuSelectionActionsRequireVisibleCardState() async throws {
         let (_, panel) = try await makePanel(["可用文字"])
         XCTAssertFalse(panel.canActOnSelectedEntry)
 
@@ -172,7 +172,7 @@ final class PanelInteractionTests: AppTestSupport {
         panel.dismiss()
     }
 
-    @MainActor func testCommandNumberStillUsesMatchingVisibleCard() async throws {
+    @MainActor func testDesktopCommandNumberStillUsesMatchingVisibleCard() async throws {
         let (model, panel) = try await makePanel(["第一条", "第二条", "第三条"])
         panel.window?.makeKeyAndOrderFront(nil)
         defer { panel.dismiss() }

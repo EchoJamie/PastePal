@@ -106,7 +106,7 @@ final class ScreenshotFeatureTests: AppTestSupport {
         XCTAssertEqual(result.pixelsWide, image.width); XCTAssertEqual(result.pixelsHigh, image.height)
     }
 
-    @MainActor func testPinAndSaveDoNotWriteClipboardAndCloseIndependently() throws {
+    @MainActor func testDesktopPinAndSaveDoNotWriteClipboardAndCloseIndependently() throws {
         _ = NSApplication.shared
         board.setString("保留", forType: .string)
         let count = board.changeCount

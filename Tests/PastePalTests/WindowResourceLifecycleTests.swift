@@ -7,7 +7,7 @@ import ClipboardCore
 @testable import PastePal
 
 final class WindowResourceLifecycleTests: AppTestSupport {
-    @MainActor func testClosedWindowsReleaseRefreshAndPreviewState() async throws {
+    @MainActor func testDesktopClosedWindowsReleaseRefreshAndPreviewState() async throws {
         _ = NSApplication.shared
         let model = try AppModel(directory: directory, settings: SettingsStore(defaults: defaults), pasteboard: board)
         _ = try model.store.record(ContentCodec.decode(values("预览内容")), limit: 10)
@@ -33,7 +33,7 @@ final class WindowResourceLifecycleTests: AppTestSupport {
         XCTAssertTrue(panel.visibleEntryIDs.isEmpty)
     }
 
-    @MainActor func testHiddenSettingsStopPollingAndScreenshotErrorRestoresIt() async throws {
+    @MainActor func testDesktopHiddenSettingsStopPollingAndScreenshotErrorRestoresIt() async throws {
         _ = NSApplication.shared
         let store = SettingsStore(defaults: defaults)
         store.screenshotEnabled = true
@@ -59,7 +59,7 @@ final class WindowResourceLifecycleTests: AppTestSupport {
         XCTAssertEqual(sidebar.selectedRow, 3)
     }
 
-    @MainActor func testOnlyDynamicSettingsPagesPollWithoutReloadingExcludedApps() async throws {
+    @MainActor func testDesktopOnlyDynamicSettingsPagesPollWithoutReloadingExcludedApps() async throws {
         _ = NSApplication.shared
         let store = SettingsStore(defaults: defaults)
         store.screenshotEnabled = true
@@ -91,7 +91,7 @@ final class WindowResourceLifecycleTests: AppTestSupport {
         XCTAssertEqual(excluded.numberOfRows, 2, "切页时刷新完整内容")
     }
 
-    @MainActor func testExternalOrderOutAndApplicationHideResumeRefresh() async throws {
+    @MainActor func testDesktopExternalOrderOutAndApplicationHideResumeRefresh() async throws {
         _ = NSApplication.shared
         let model = try AppModel(directory: directory, settings: SettingsStore(defaults: defaults), pasteboard: board, paste: PasteCoordinator(permission: { true }))
         let settings = SettingsController(model: model, screenPermissionCheck: { false })

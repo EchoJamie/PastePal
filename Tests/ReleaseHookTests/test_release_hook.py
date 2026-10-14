@@ -49,7 +49,7 @@ exit "${TEST_EXIT:-0}"
         remote = self.git("ls-remote", "origin", f"refs/tags/{tag}").stdout
         self.assertEqual(bool(remote.strip()), success)
 
-    def test_annotated_and_lightweight_tags_run_full_release_tests(self):
+    def test_annotated_and_lightweight_tags_run_release_gate(self):
         self.git("tag", "-a", "v0.1.1", "-m", "release")
         self.push_tag(success=True)
         self.git("push", "origin", ":refs/tags/v0.1.1")
@@ -93,6 +93,24 @@ exit "${TEST_EXIT:-0}"
         self.git("tag", "checkpoint")
         self.push_tag("checkpoint", success=True)
         self.assertFalse(Path(self.env["RELEASE_HOOK_CALLS"]).exists())
+
+    def test_test_entrypoints_keep_desktop_tests_opt_in(self):
+        source = Path(__file__).resolve().parents[2] / "scripts/swift-env.sh"
+        runner = self.repo / "scripts/swift-env.sh"
+        runner.write_text(source.read_text())
+        (self.repo / "scripts/prepare-dependencies.py").write_text("")
+        binary = Path(self.temp.name) / "bin"
+        binary.mkdir()
+        swift = binary / "swift"
+        swift.write_text('#!/bin/bash\nprintf "%s\\n" "$*" >> "$RELEASE_HOOK_CALLS"\n')
+        swift.chmod(0o755)
+        self.env["PATH"] = str(binary) + os.pathsep + self.env["PATH"]
+        for mode, excluded in (("test", "/testDesktop"), ("test-desktop", "/test(?!Desktop)")):
+            with self.subTest(mode=mode):
+                subprocess.run([str(runner), mode, "-c", "release", "--filter", "ImagePreviewTests"],
+                               cwd=self.repo, env=self.env, check=True)
+                calls = Path(self.env["RELEASE_HOOK_CALLS"]).read_text().splitlines()
+                self.assertEqual(calls[-2:], ["package resolve", f"test --skip {excluded} -c release --filter ImagePreviewTests"])
 
 
 if __name__ == "__main__":

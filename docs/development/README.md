@@ -35,15 +35,23 @@ KeyboardShortcuts 锁定 2.4.0 / `1aef85578fdd4f9eaeeb8d53b7b4fc31bf08fe27`。`p
 ```sh
 ./scripts/swift-env.sh test
 ./scripts/swift-env.sh test -c release
-./scripts/smoke-test.sh
+python3 Tests/ReleaseHookTests/test_release_hook.py
 python3 scripts/verify-docs.py
 ```
 
 `Tests/ClipboardCoreTests/` 检查持久化、恢复、保留策略与查询资源边界；`Tests/PastePalTests/` 检查应用交互、权限、截图及生命周期；各自的 `Support/` 集中提供临时数据库、独立剪贴板和样例数据辅助方法。
 
+| 分类 | 必要覆盖 | 运行入口 |
+| --- | --- | --- |
+| 业务逻辑与数据完整性 | 存储、迁移、保留策略、搜索、权限分支、剪贴板归属、异步取消与资源释放 | 默认 `test` |
+| 隐藏组件与布局 | 隐藏窗口中的编辑器、快捷键路由、分组操作、卡片和预览布局、图片像素与缩放；直接调用控件或投递到测试窗口的合成事件 | 默认 `test` |
+| 桌面交互验收 | 窗口显示与激活、跨应用焦点、Dock、真实窗口生命周期、原生鼠标事件循环和截图浮层 | `test-desktop`，可用 `--filter` 选定相关用例 |
+
+只有必须依赖真实桌面的用例才使用 `testDesktop…` 方法名；默认入口排除这类用例，桌面入口只运行这类用例。两类测试仍按业务模块放置，避免复制测试和维护另一份名单。默认检查不得显示或激活窗口、改变系统光标或向其他应用发送输入；不要为方便布置测试调用 `show`、`makeKeyAndOrderFront`，优先使用现有 `prepareForDisplay` 和隐藏窗口布局。涉及桌面行为的改动，开发阶段另行运行对应桌面验收，不以默认检查通过代替实机验证。
+
 用例应能独立执行，并释放临时资源。优先覆盖数据安全、状态转换及已知回归；布局检查关注遮挡和溢出，不重复固定样式常量。开发期导图与机器相关的耗时、内存阈值不作为单元测试通过条件。
 
-原生冒烟默认构建优化后的 Preview，用隔离样例渲染窗口并检查应用包资源，不监听通用剪贴板；可通过 `PASTEPAL_APP_PATH` 指定已有包。截图输出集中放在 `build/validation/`，不写入测试源码或文档目录。实机检查按[验收清单](验收清单.md)执行，测试代码或旧包通过不等于当前版本验收通过。
+原生冒烟通过 `./scripts/smoke-test.sh` 显式执行，默认构建优化后的 Preview，用隔离样例渲染窗口并检查应用包资源，不监听通用剪贴板；可通过 `PASTEPAL_APP_PATH` 指定已有包。截图输出集中放在 `build/validation/`，不写入测试源码或文档目录。实机检查按[验收清单](验收清单.md)执行，测试代码或旧包通过不等于当前版本验收通过。
 
 只读常驻采样使用 `scripts/sample-resident.py`：先确认目标应用 PID，再指定 `--pid`、`--seconds`、`--interval`、`--output`。输出放 `build/validation/`；采样在 PID 退出或复用时停止，输出路径必须尚不存在。
 
@@ -55,7 +63,7 @@ python3 scripts/verify-docs.py
 
 ## GitHub Release 自动发布
 
-首次克隆后执行 `git config --local core.hooksPath .githooks`，启用仓库的发布检查。推送 `vX.Y.Z` 标签时，`pre-push` 会核对版本、标签提交与当前 HEAD、工作区是否干净，再执行文档检查和与 CI 相同的 `./scripts/swift-env.sh test -c release`；任何一步失败都会阻止推送。普通分支推送不执行该检查。完整原生交互测试可能显示窗口，应在可运行 UI 测试的桌面会话执行。hook 自身可通过 `python3 Tests/ReleaseHookTests/test_release_hook.py` 验证，使用临时本地仓库，不连接 GitHub。
+首次克隆后执行 `git config --local core.hooksPath .githooks`，启用仓库的发布检查。推送 `vX.Y.Z` 标签时，`pre-push` 会核对版本、标签提交与当前 HEAD、工作区是否干净，再执行文档检查和与 CI 相同的 `./scripts/swift-env.sh test -c release`，覆盖逻辑与隐藏组件；任何一步失败都会阻止推送。普通分支推送不执行该检查。桌面验收按改动范围在开发阶段显式执行，不作为标签推送时自动操作桌面的步骤。hook 与测试入口可通过 `python3 Tests/ReleaseHookTests/test_release_hook.py` 验证，使用临时本地仓库，不连接 GitHub。
 
 `.github/workflows/release.yml` 在推送 `vX.Y.Z` 标签时执行，也可手动输入已存在的标签。流程核对标签与 `resources/Info.plist` 版本 → Release 测试 → 临时证书导入 → 正式应用与 DMG → 上传资产 → 发布 Release。使用 `macos-15` 的 arm64 runner，只交付 Apple Silicon 版本。
 

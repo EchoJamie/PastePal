@@ -46,7 +46,7 @@ jobs:
         run: |
           : "${CERTIFICATE_BASE64:?缺少 MACOS_CERTIFICATE_P12_BASE64}"
           : "${CERTIFICATE_PASSWORD:?缺少 MACOS_CERTIFICATE_PASSWORD}"
-      - name: Release 测试
+      - name: Release 逻辑与隐藏组件测试
         run: ./scripts/swift-env.sh test -c release
       - name: 导入临时签名证书
         env:

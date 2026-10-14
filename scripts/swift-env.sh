@@ -4,6 +4,16 @@ if [[ -z "${DEVELOPER_DIR:-}" && -d /Applications/Xcode.app/Contents/Developer ]
   export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 fi
 case "${1:-}" in
+  test)
+    shift
+    set -- test --skip '/testDesktop' "$@"
+    ;;
+  test-desktop)
+    shift
+    set -- test --skip '/test(?!Desktop)' "$@"
+    ;;
+esac
+case "${1:-}" in
   build|test|run)
     task_root="$(cd "$(dirname "$0")/.." && pwd)"
     cd "$task_root"

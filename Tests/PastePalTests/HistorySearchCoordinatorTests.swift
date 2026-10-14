@@ -31,7 +31,7 @@ final class HistorySearchCoordinatorTests: AppTestSupport {
         await fulfillment(of: [completed], timeout: 2)
         XCTAssertEqual(lock.withLock { executed }, ["first", "last"])
     }
-    @MainActor func testPanelCanSelectAndUseEntryBeyondResidentOverview() async throws {
+    @MainActor func testDesktopPanelCanSelectAndUseEntryBeyondResidentOverview() async throws {
         _ = NSApplication.shared
         let model = try AppModel(directory: directory, settings: SettingsStore(defaults: defaults), pasteboard: board)
         var firstID: String?

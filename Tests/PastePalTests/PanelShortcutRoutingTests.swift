@@ -4,7 +4,7 @@ import KeyboardShortcuts
 @testable import PastePal
 
 final class PanelShortcutRoutingTests: AppTestSupport {
-    @MainActor func testReboundSearchAndGroupActionsRemoveOldKeysAndUpdateHints() async throws {
+    @MainActor func testDesktopReboundSearchAndGroupActionsRemoveOldKeysAndUpdateHints() async throws {
         let (model, panel) = try await makePanel(["内容"])
         defer { panel.dismiss() }
         panel.window?.makeKeyAndOrderFront(nil)
@@ -36,7 +36,7 @@ final class PanelShortcutRoutingTests: AppTestSupport {
         XCTAssertNil(board.string(forType: .string))
     }
 
-    @MainActor func testReboundPositionUsesConfiguredCardAndRefreshesVisibleLabel() async throws {
+    @MainActor func testDesktopReboundPositionUsesConfiguredCardAndRefreshesVisibleLabel() async throws {
         let (model, panel) = try await makePanel(["第一内容", "第二内容"])
         defer { panel.dismiss() }
         panel.window?.makeKeyAndOrderFront(nil)
@@ -53,7 +53,7 @@ final class PanelShortcutRoutingTests: AppTestSupport {
         try await waitUntil { board.string(forType: .string) == expected }
     }
 
-    @MainActor func testReboundPlainTextDoesNotLeaveOptionReturnActive() async throws {
+    @MainActor func testDesktopReboundPlainTextDoesNotLeaveOptionReturnActive() async throws {
         let (model, panel) = try await makePanel(["纯文本"])
         defer { panel.dismiss() }
         panel.window?.makeKeyAndOrderFront(nil)
@@ -67,7 +67,7 @@ final class PanelShortcutRoutingTests: AppTestSupport {
         try await waitUntil { board.string(forType: .string) == "纯文本" }
     }
 
-    @MainActor func testSettingsAndQuitCombinationsRemainAvailableToMainMenuDuringGroupEditing() async throws {
+    @MainActor func testDesktopSettingsAndQuitCombinationsRemainAvailableToMainMenuDuringGroupEditing() async throws {
         let (_, panel) = try await makePanel(["保留"])
         defer { panel.dismiss() }
         panel.window?.makeKeyAndOrderFront(nil)

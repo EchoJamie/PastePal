@@ -90,7 +90,7 @@ final class ScreenshotToolbarInteractionTests: AppTestSupport {
         XCTAssertEqual(confirmed, CGRect(x: -90, y: 10, width: 80, height: 80))
     }
 
-    @MainActor func testEveryOverlayAcceptsFirstPressAndRoutesWindowCoordinates() throws {
+    @MainActor func testDesktopEveryOverlayAcceptsFirstPressAndRoutesWindowCoordinates() throws {
         _ = NSApplication.shared
         let context = try XCTUnwrap(CGContext(data: nil, width: 10, height: 10, bitsPerComponent: 8, bytesPerRow: 40, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         let image = try XCTUnwrap(context.makeImage())

@@ -18,7 +18,7 @@ done
 
 [[ -n "$release_tag" ]] || exit 0
 [[ -z "$(git status --porcelain)" ]] || { echo '请提交或清理工作区改动，确保测试与发布标签源码一致' >&2; exit 1; }
-echo "检查 ${release_tag}：文档与完整 Release 测试"
+echo "检查 ${release_tag}：文档、逻辑与隐藏组件 Release 测试"
 python3 scripts/verify-docs.py
 ./scripts/swift-env.sh test -c release
 [[ "$(git rev-parse HEAD)" == "$release_commit" && -z "$(git status --porcelain)" ]] || {

@@ -4,7 +4,7 @@ import ClipboardCore
 @testable import PastePal
 
 final class CardGroupDragTests: AppTestSupport {
-    @MainActor func testDropOnlyAddsMembershipAndRestoresHighlight() async throws {
+    @MainActor func testDesktopDropOnlyAddsMembershipAndRestoresHighlight() async throws {
         let (model, panel) = try await makePanel(["拖动内容"])
         defer { panel.dismiss() }
         panel.window?.makeKeyAndOrderFront(nil)
@@ -50,7 +50,6 @@ final class CardGroupDragTests: AppTestSupport {
     @MainActor func testExternalMissingAndNonCopyDropsAreRejected() async throws {
         let (model, panel) = try await makePanel(["保留"])
         defer { panel.dismiss() }
-        panel.window?.makeKeyAndOrderFront(nil)
         _ = try model.store.createGroup(name: "目标")
         model.refresh(); try await waitUntil { model.groups.count == 1 }
         let target = try XCTUnwrap(descendants(of: panel.window?.contentView).compactMap { $0 as? GroupButton }.first)
@@ -72,7 +71,6 @@ final class CardGroupDragTests: AppTestSupport {
     @MainActor func testDragPreviewIsSmallAndTranslucentWithoutChangingCardOpacity() async throws {
         let (_, panel) = try await makePanel(["清晰原卡片"])
         defer { panel.dismiss() }
-        panel.window?.makeKeyAndOrderFront(nil)
         panel.window?.contentView?.layoutSubtreeIfNeeded()
         let item = try XCTUnwrap(panel.historyView.item(at: IndexPath(item: 0, section: 0)) as? CardItem)
         let image = try XCTUnwrap(item.card.makeDragPreview())
@@ -85,7 +83,7 @@ final class CardGroupDragTests: AppTestSupport {
         XCTAssertEqual(panel.panelContentView.alphaValue, 1)
     }
 
-    @MainActor func testHorizontalJoinCancellationPreservesFilteredCardsAndScope() async throws {
+    @MainActor func testDesktopHorizontalJoinCancellationPreservesFilteredCardsAndScope() async throws {
         let (model, panel) = try await makePanel(["匹配内容", "其他"])
         defer { panel.dismiss() }
         panel.window?.makeKeyAndOrderFront(nil)

@@ -5,7 +5,7 @@ import ClipboardCore
 @testable import PastePal
 
 final class GroupDeleteKeyboardTests: AppTestSupport {
-    @MainActor func testConfirmationCyclesFocusAndOnlyActivatesCurrentChoice() async throws {
+    @MainActor func testDesktopConfirmationCyclesFocusAndOnlyActivatesCurrentChoice() async throws {
         let (model, panel) = try await makePanel(["保留内容"])
         defer { panel.dismiss() }
         let first = try model.store.createGroup(name: "工作")

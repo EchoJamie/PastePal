@@ -9,7 +9,7 @@ import ClipboardCore
 final class SearchInteractionTests: AppTestSupport {
     @MainActor func testPanelStartsOnFirstCardAndSearchReturnOnlyCompletesSearch() async throws {
         let (model, panel) = try await makePanel(["其他内容", "命中内容"])
-        panel.show()
+        panel.prepareForDisplay()
         XCTAssertEqual(panel.interactionMode, .cards)
         XCTAssertTrue(panel.isCollectionFocused)
         XCTAssertEqual(panel.selectedEntryID, model.entries.first?.id)
@@ -70,7 +70,6 @@ final class SearchInteractionTests: AppTestSupport {
 
     @MainActor func testCenteredSearchTriggerHasNoDefaultGroupLabelAndRestoresHistory() async throws {
         let (_, panel) = try await makePanel(["命中文字", "其他"])
-        panel.window?.makeKeyAndOrderFront(nil)
         panel.window?.contentView?.layoutSubtreeIfNeeded()
         XCTAssertTrue(panel.isGroupToolbarVisible)
         XCTAssertFalse(panel.isSearchControlVisible)
@@ -120,7 +119,7 @@ final class SearchInteractionTests: AppTestSupport {
         try model.store.add(entryID: first.id, toGroup: group.id)
         try model.store.add(entryID: second.id, toGroup: group.id)
         model.refresh(); try await waitUntil { model.groups.count == 1 }
-        panel.prepareForDisplay(); panel.window?.makeKeyAndOrderFront(nil); panel.selectGroup(group.id)
+        panel.prepareForDisplay(); panel.selectGroup(group.id)
         XCTAssertEqual(panel.contextualDeleteTitle, L("从「\("项目")」移除所选（Delete）"))
         panel.collectionView(panel.historyView, didSelectItemsAt: [IndexPath(item: 1, section: 0)])
         let original = panel.selectedEntryID
@@ -152,7 +151,7 @@ final class SearchInteractionTests: AppTestSupport {
         let outside = try XCTUnwrap(model.entries.first { $0.text == "组外命中" })
         try model.store.add(entryID: inside.id, toGroup: group.id)
         model.refresh(); try await waitUntil { model.groups.count == 1 }
-        panel.show(); panel.selectGroup(group.id)
+        panel.prepareForDisplay(); panel.selectGroup(group.id)
         let original = panel.selectedEntryID
 
         panel.beginSearch(selectAll: false)
@@ -184,7 +183,7 @@ final class SearchInteractionTests: AppTestSupport {
 
     @MainActor func testSearchEditorDoesNotOverlapIconAndHistoryHasNoScrollers() async throws {
         let (_, panel) = try await makePanel(["文本"])
-        panel.show(); panel.beginSearch(selectAll: false)
+        panel.prepareForDisplay(); panel.beginSearch(selectAll: false)
         panel.window?.contentView?.layoutSubtreeIfNeeded()
         let search = panel.searchControl
         let cell = try XCTUnwrap(search.cell as? NSSearchFieldCell)
@@ -222,7 +221,6 @@ final class SearchInteractionTests: AppTestSupport {
 
     @MainActor func testFirstOrdinaryCharacterIsForwardedToNativeSearchEditorWithoutLoss() async throws {
         let (_, panel) = try await makePanel(["éclair", "其他"])
-        panel.window?.makeKeyAndOrderFront(nil)
         panel.window?.makeFirstResponder(panel.historyView)
         panel.historyView.keyDown(with: try keyEvent(0, "é"))
 
@@ -233,7 +231,7 @@ final class SearchInteractionTests: AppTestSupport {
 
     @MainActor func testReservedKeysAndCommandShortcutDoNotStartSearch() async throws {
         let (model, panel) = try await makePanel(["第一条", "第二条"])
-        panel.show()
+        panel.prepareForDisplay()
         let window = try XCTUnwrap(panel.window)
         let initial = panel.selectedEntryID
         window.sendEvent(try keyEvent(124, String(UnicodeScalar(NSRightArrowFunctionKey)!)))

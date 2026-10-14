@@ -155,7 +155,7 @@ final class ScreenshotToolStateTests: AppTestSupport {
         XCTAssertTrue(toolbar.effectControl.isHiddenOrHasHiddenAncestor)
     }
 
-    @MainActor func testNativeCanvasAndToolbarCursorHandoff() throws {
+    @MainActor func testDesktopNativeCanvasAndToolbarCursorHandoff() throws {
         _ = NSApplication.shared
         let frame = CGRect(x: 0, y: 0, width: 300, height: 300)
         let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
@@ -174,7 +174,7 @@ final class ScreenshotToolStateTests: AppTestSupport {
         canvas.cursorUpdate(with: event); XCTAssertEqual(NSCursor.current, .arrow)
     }
 
-    @MainActor func testExportBackKeepsSelectionAnnotationsAndUndoHistory() async throws {
+    @MainActor func testDesktopExportBackKeepsSelectionAnnotationsAndUndoHistory() async throws {
         _ = NSApplication.shared
         let image = try XCTUnwrap(NSBitmapImageRep(data: pngData())?.cgImage)
         let monitor = ClipboardMonitor(settings: SettingsStore(defaults: defaults), pasteboard: board)

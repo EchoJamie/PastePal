@@ -89,7 +89,7 @@ final class GroupInteractionTests: XCTestCase {
         XCTAssertEqual(rename.headingText, L("重命名分组"))
     }
 
-    @MainActor func testLabelEditingDeletionAndLocalShortcutRouting() async throws {
+    @MainActor func testDesktopLabelEditingDeletionAndLocalShortcutRouting() async throws {
         _ = NSApplication.shared
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let suite = "GroupInteractionTests.\(UUID())"
@@ -159,7 +159,7 @@ final class GroupInteractionTests: XCTestCase {
 }
 
 final class GroupPanelInteractionTests: AppTestSupport {
-    @MainActor func testDraggingGroupLabelsInsertsOrderAndCancellationDoesNotMutate() async throws {
+    @MainActor func testDesktopDraggingGroupLabelsInsertsOrderAndCancellationDoesNotMutate() async throws {
         let (model, panel) = try await makePanel(["拖动测试"])
         let groups = try ["甲组", "乙组", "丙组"].map { try model.store.createGroup(name: $0) }
         model.refresh(); try await waitUntil { model.groups.count == 3 }
@@ -225,7 +225,7 @@ final class GroupPanelInteractionTests: AppTestSupport {
         try model.store.add(entryID: workEntry.id, toGroup: work.id)
         try model.store.add(entryID: readingEntry.id, toGroup: reading.id)
         model.refresh(); try await waitUntil { model.groups.count == 2 }
-        panel.prepareForDisplay(); panel.window?.makeKeyAndOrderFront(nil); panel.window?.contentView?.layoutSubtreeIfNeeded()
+        panel.prepareForDisplay(); panel.window?.contentView?.layoutSubtreeIfNeeded()
 
         XCTAssertNil(panel.selectedGroupID)
         XCTAssertEqual(panel.groupLabelTitles, ["工作", "阅读"])
@@ -244,7 +244,7 @@ final class GroupPanelInteractionTests: AppTestSupport {
         XCTAssertNil(panel.selectedGroupID)
     }
 
-    @MainActor func testPanelGroupCreationContextManagementAndFocusRestoration() async throws {
+    @MainActor func testDesktopPanelGroupCreationContextManagementAndFocusRestoration() async throws {
         let (model, panel) = try await makePanel(["待管理内容"])
         let first = try model.store.createGroup(name: "甲组")
         let second = try model.store.createGroup(name: "乙组")
@@ -293,7 +293,7 @@ final class GroupPanelInteractionTests: AppTestSupport {
         XCTAssertTrue(panel.isVisible)
     }
 
-    @MainActor func testInlineGroupValidationCancelAndManagementKeepHistoryUntouched() async throws {
+    @MainActor func testDesktopInlineGroupValidationCancelAndManagementKeepHistoryUntouched() async throws {
         let (model, panel) = try await makePanel(["内容"])
         _ = try model.store.createGroup(name: "工作")
         model.refresh(); try await waitUntil { model.groups.count == 1 }
@@ -331,7 +331,7 @@ final class GroupPanelInteractionTests: AppTestSupport {
         XCTAssertTrue(panel.isCollectionFocused)
     }
 
-    @MainActor func testCommandGUsesHorizontalGroupsAndAddsWithoutPasting() async throws {
+    @MainActor func testDesktopCommandGUsesHorizontalGroupsAndAddsWithoutPasting() async throws {
         let (model, panel) = try await makePanel(["待归组"])
         let work = try model.store.createGroup(name: "工作")
         let reading = try model.store.createGroup(name: "阅读资料")

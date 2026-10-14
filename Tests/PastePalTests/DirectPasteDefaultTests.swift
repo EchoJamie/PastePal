@@ -42,7 +42,7 @@ final class DirectPasteDefaultTests: AppTestSupport {
         XCTAssertEqual(try model.store.entries().first?.id, entry.id)
     }
 
-    @MainActor func testHistoryKeyboardSelectionDoesNotDeactivateOriginalApplication() async throws {
+    @MainActor func testDesktopHistoryKeyboardSelectionDoesNotDeactivateOriginalApplication() async throws {
         guard try await runFocusTestInChildProcess(#function) else { return }
         let (model, panel) = try await makePanel(["第一条", "第二条"])
         let originalApp = try XCTUnwrap(NSWorkspace.shared.frontmostApplication)
