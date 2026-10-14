@@ -14,7 +14,7 @@
 
 `debug` 是默认 Preview 构建的别名。两种应用共用 Bundle ID `local.jamie.PastePal` 和数据，同一时间只运行一个实例。目标路径的应用正在运行时，脚本保留候选包到 `build/validation/` 并返回状态 4；正常退出后再构建，不覆盖运行中的包。
 
-脚本仅为自身进程选择 `/Applications/Xcode.app/Contents/Developer`，可用 `DEVELOPER_DIR` 覆盖，不更改全局 `xcode-select`。请通过项目脚本构建和测试，确保依赖资源补丁生效。
+脚本仅为自身进程选择 `/Applications/Xcode.app/Contents/Developer`，可用 `DEVELOPER_DIR` 覆盖，并从所选开发工具重新解析 macOS SDK，避免 Git hook 继承的命令行工具 SDK 与 Xcode 混用；不更改全局 `xcode-select`。请通过项目脚本构建和测试，确保依赖资源补丁生效。
 
 ## 签名与依赖资源
 

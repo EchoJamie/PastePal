@@ -102,9 +102,10 @@ exit "${TEST_EXIT:-0}"
         binary = Path(self.temp.name) / "bin"
         binary.mkdir()
         swift = binary / "swift"
-        swift.write_text('#!/bin/bash\nprintf "%s\\n" "$*" >> "$RELEASE_HOOK_CALLS"\n')
+        swift.write_text('#!/bin/bash\n[[ "$SDKROOT" != "/wrong-inherited-sdk" ]] || exit 1\nprintf "%s\\n" "$*" >> "$RELEASE_HOOK_CALLS"\n')
         swift.chmod(0o755)
         self.env["PATH"] = str(binary) + os.pathsep + self.env["PATH"]
+        self.env["SDKROOT"] = "/wrong-inherited-sdk"
         for mode, excluded in (("test", "/testDesktop"), ("test-desktop", "/test(?!Desktop)")):
             with self.subTest(mode=mode):
                 subprocess.run([str(runner), mode, "-c", "release", "--filter", "ImagePreviewTests"],
